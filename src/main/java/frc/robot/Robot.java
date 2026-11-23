@@ -18,7 +18,7 @@ import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.ironmaple.simulation.SimulatedArena;
 import static edu.wpi.first.units.Units.Seconds;
-
+import frc.robot.util.RobotComponents;
 
    /**
    * Main robot class. Configures logging, owns the {@link RobotContainer} and drives the command
@@ -33,27 +33,19 @@ import static edu.wpi.first.units.Units.Seconds;
 
     /** Starts AdvantageKit logging and builds the {@link RobotContainer}. */
     public Robot() {
-      RobotController.setBrownoutVoltage(Constants.Energia.TENSAO_BROWNOUT_VOLTS); //Brownout Setpoint
+      RobotController.setBrownoutVoltage(Constants.Energia.TENSAO_BROWNOUT_VOLTS);
 
       if (Constants.MODO_ATUAL == Constants.Mode.REPLAY) {
-        //Parte 10
-        // Replay a log as fast as possible and write the re-processed output next to it.
 
-
-        //Logger.setUseTiming(false);
-        setUseTiming(false); //aí processa os ciclos do replay tão rápido quanto o programa e o computador permitem.
-        //                               ex: um log de 2 minutos pode ser processado em muito menos tempo, dependendo da carga de processamento.
-
-
-
+        // Process replay logs without waiting for real-time cycle timing.
+        setUseTiming(false);
 
         String logPath = LogFileUtil.findReplayLog();
         Logger.setReplaySource(new WPILOGReader(logPath));
         Logger.addDataReceiver(new WPILOGWriter(LogFileUtil.addPathSuffix(logPath, "_sim")));
         Logger.addDataReceiver(new NT4Publisher());
       } else {
-        //Parte 2
-        // Publish data to NetworkTables and, in simulation, also write a .wpilog file.
+
         Logger.addDataReceiver(new NT4Publisher());
         if (isSimulation()) {
           Logger.addDataReceiver(new WPILOGWriter());
@@ -61,10 +53,10 @@ import static edu.wpi.first.units.Units.Seconds;
       }
       Logger.start();
 
-      m_robotContainer = new RobotContainer();  
+      m_robotContainer = new RobotContainer();
 
     }
-    
+
     @Override
     public void robotInit(){
       SmartDashboard.putData("Arena", arena);
@@ -74,30 +66,19 @@ import static edu.wpi.first.units.Units.Seconds;
       arena.setRobotPose(pose);
     }
 
-
-    // ---------------------------------------------------------------------------
-    // Periodic (all modes)
-    // ---------------------------------------------------------------------------
-
     /** Runs the command scheduler. Must be called every loop, regardless of mode. */
     @Override
     public void robotPeriodic() {
       CommandScheduler.getInstance().run();
-    
+      m_robotContainer.atualizarPosesPeloControle();
     }
-
 
     @Override
     public void simulationPeriodic() {
-        SimulatedArena.getInstance().simulationPeriodic(); //para atualizar a física com paredes...
-        //SimulatedArena.overrideSimulationTimings(0.01, 3.0); deu errado porque e
+        SimulatedArena.getInstance().simulationPeriodic();
+
         SimulatedArena.overrideSimulationTimings(Seconds.of(0.01), 3);
     }
-
-
-    // ---------------------------------------------------------------------------
-    // Disabled
-    // ---------------------------------------------------------------------------
 
     @Override
     public void disabledInit() {}
@@ -107,10 +88,6 @@ import static edu.wpi.first.units.Units.Seconds;
 
     @Override
     public void disabledExit() {}
-
-    // ---------------------------------------------------------------------------
-    // Autonomous
-    // ---------------------------------------------------------------------------
 
     /** Schedules the autonomous command selected on the dashboard, if any. */
     @Override
@@ -131,10 +108,6 @@ import static edu.wpi.first.units.Units.Seconds;
       m_robotContainer.aoFinalizarAutonomo();
     }
 
-    // ---------------------------------------------------------------------------
-    // Teleoperated
-    // ---------------------------------------------------------------------------
-
     /** Cancels the autonomous command so that the driver takes over immediately. */
     @Override
     public void teleopInit() {
@@ -148,10 +121,6 @@ import static edu.wpi.first.units.Units.Seconds;
 
     @Override
     public void teleopExit() {}
-
-    // ---------------------------------------------------------------------------
-    // Test
-    // ---------------------------------------------------------------------------
 
     /** Cancels all running commands when entering test mode. */
     @Override

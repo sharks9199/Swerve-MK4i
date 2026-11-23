@@ -36,7 +36,7 @@ public class Vision extends SubsystemBase {
 
   @Override
   public void periodic() {
-    // MegaTag 2 needs the robot heading in the same field frame as the pose estimator.
+
     io.definirOrientacao(
         drive.getHeading().getDegrees(), Math.toDegrees(drive.getYawVelocityRadPerSec()));
     io.updateInputs(inputs);
@@ -48,8 +48,6 @@ public class Vision extends SubsystemBase {
     Logger.recordOutput("Vision/MegaTag2/TagCount", inputs.quantidadeTagsMegaTag2);
     Logger.recordOutput("Vision/MegaTag2/DistanceMeters", inputs.distanciaMediaTagsMegaTag2);
 
-    // Prefer MegaTag2; it uses the Pigeon orientation supplied above and does not
-    // estimate heading from the tag geometry. Never fuse the same camera frame twice.
     if (medicaoValida(
         inputs.poseMegaTag2,
         inputs.timestampMegaTag2,
@@ -72,8 +70,6 @@ public class Vision extends SubsystemBase {
       return;
     }
 
-    // Fall back to MegaTag1 only if MT2 is unavailable/invalid. Use heading only
-    // with multiple tags; a single tag's heading is too ambiguous for reliable fusion.
     if (medicaoValida(
         inputs.poseMegaTag1,
         inputs.timestampMegaTag1,
@@ -113,7 +109,7 @@ public class Vision extends SubsystemBase {
         || !Double.isFinite(timestamp)
         || timestamp <= 0.0
         || timestamp <= ultimoTimestampAceito
-        || !Double.isFinite(pose.getX()) //isso foi MUUUUITO DAORA de fazer. Vários Ou para no final retornar false Kkk
+        || !Double.isFinite(pose.getX())
         || !Double.isFinite(pose.getY())
         || !Double.isFinite(distancia)
         || distancia <= 0.0
@@ -121,21 +117,17 @@ public class Vision extends SubsystemBase {
       return false;
     }
 
-    // Reject measurements while rotating too fast (motion blur / latency error).
     if (Math.abs(drive.getYawVelocityRadPerSec())
         > Constants.Vision.VELOCIDADE_ANGULAR_MAXIMA_PARA_VISAO_RAD_S) {
       return false;
     }
 
-    // Reject estimates far from the current odometry. The tolerance scales with range
-    // and tag count; this guards against wrong field setup or transient bad solves.
     double erro = pose.getTranslation().getDistance(drive.getPose().getTranslation());
     double tolerancia = Math.max(1.0, distancia * (tags >= 2 ? 1.5 : 1.0));
     if (erro > tolerancia) {
       return false;
     }
 
-    // A single tag with high ambiguity is unreliable.
     if (tags == 1
         && inputs.ambiguidadeMinimaMegaTag2 > Constants.Vision.AMBIGUIDADE_MAXIMA_TAG_UNICA_HEADING
         && inputs.ambiguidadeMinimaMegaTag2 > 0.0) {

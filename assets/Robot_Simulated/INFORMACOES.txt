@@ -1,0 +1,6 @@
+COMPONENTES, NA ORDEM
+  model.glb    - chassi / robô fixo
+  model_0.glb  - Elevador Central Part
+  model_1.glb  - Elevador External Part
+  model_2.glb  - Intake
+  model_3.glb  - Feeder

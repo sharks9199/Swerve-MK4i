@@ -52,10 +52,6 @@ public final class SwerveOdometry extends Thread {
     setDaemon(true);
   }
 
-  // ---------------------------------------------------------------------------
-  // Singleton
-  // ---------------------------------------------------------------------------
-
   /** Lazy, thread-safe holder for the singleton instance. */
   private static class InstanceHolder {
     private static final SwerveOdometry INSTANCE = new SwerveOdometry();
@@ -65,10 +61,6 @@ public final class SwerveOdometry extends Thread {
   public static SwerveOdometry getInstance() {
     return InstanceHolder.INSTANCE;
   }
-
-  // ---------------------------------------------------------------------------
-  // Lifecycle
-  // ---------------------------------------------------------------------------
 
   /**
    * Starts the thread if it has not been started yet and at least one timestamp queue has been
@@ -95,10 +87,6 @@ public final class SwerveOdometry extends Thread {
     running = false;
     interrupt();
   }
-
-  // ---------------------------------------------------------------------------
-  // Signal registration
-  // ---------------------------------------------------------------------------
 
   /**
    * Registers a Phoenix signal to be sampled by the thread.
@@ -170,10 +158,6 @@ public final class SwerveOdometry extends Thread {
     return queue;
   }
 
-  // ---------------------------------------------------------------------------
-  // Thread body
-  // ---------------------------------------------------------------------------
-
   @Override
   public void run() {
     while (running && !Thread.currentThread().isInterrupted()) {
@@ -181,10 +165,10 @@ public final class SwerveOdometry extends Thread {
 
       try {
         if (IS_CAN_FD && phoenixSignals.length > 0) {
-          // CAN FD: block until all signals have fresh data.
+
           BaseStatusSignal.waitForAll(LOOP_PERIOD_SECONDS, phoenixSignals);
         } else {
-          // Classic CAN: sleep for one period, then poll the latest values.
+
           Thread.sleep((long) (LOOP_PERIOD_SECONDS * 1000.0));
 
           if (phoenixSignals.length > 0) {
@@ -215,7 +199,6 @@ public final class SwerveOdometry extends Thread {
   private void publishSamples() {
     double timestamp = RobotController.getFPGATime() / 1_000_000.0;
 
-    // Compensate for the average CAN latency of the Phoenix signals.
     if (phoenixSignals.length > 0) {
       double totalLatency = 0.0;
 

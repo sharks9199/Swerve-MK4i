@@ -12,13 +12,8 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 
-//Parte 5
 /** {@link ModuleIO} implementation that simulates a module with two DC motor models. */
 public class ModuleIOSim implements ModuleIO {
-
-  // ---------------------------------------------------------------------------
-  // Simulation parameters
-  // ---------------------------------------------------------------------------
 
   private static final double DRIVE_KP = 0.05;
   private static final double DRIVE_KD = 0.0;
@@ -29,10 +24,6 @@ public class ModuleIOSim implements ModuleIO {
   private static final double TURN_KD = 0.0;
   private static final DCMotor DRIVE_GEARBOX = DCMotor.getKrakenX60Foc(1);
   private static final DCMotor TURN_GEARBOX = DCMotor.getKrakenX60Foc(1);
-
-  // ---------------------------------------------------------------------------
-  // State
-  // ---------------------------------------------------------------------------
 
   private final DCMotorSim driveSim;
   private final DCMotorSim turnSim;
@@ -70,13 +61,9 @@ public class ModuleIOSim implements ModuleIO {
     turnController.enableContinuousInput(-Math.PI, Math.PI);
   }
 
-  // ---------------------------------------------------------------------------
-  // ModuleIO implementation
-  // ---------------------------------------------------------------------------
-
   @Override
   public void updateInputs(ModuleIOInputs inputs) {
-    // Run closed-loop control
+
     if (driveClosedLoop) {
       driveAppliedVolts =
           driveFFVolts + driveController.calculate(driveSim.getAngularVelocityRadPerSec());
@@ -91,20 +78,17 @@ public class ModuleIOSim implements ModuleIO {
       turnController.reset();
     }
 
-    // Update simulation state
     driveSim.setInputVoltage(MathUtil.clamp(driveAppliedVolts, -12.0, 12.0));
     turnSim.setInputVoltage(MathUtil.clamp(turnAppliedVolts, -12.0, 12.0));
     driveSim.update(0.02);
     turnSim.update(0.02);
 
-    // Update drive inputs
     inputs.driveConnected = true;
     inputs.drivePositionRad = driveSim.getAngularPositionRad();
     inputs.driveVelocityRadPerSec = driveSim.getAngularVelocityRadPerSec();
     inputs.driveAppliedVolts = driveAppliedVolts;
     inputs.driveCurrentAmps = Math.abs(driveSim.getCurrentDrawAmps());
 
-    // Update turn inputs
     double turnPositionRad = turnSim.getAngularPositionRad() * (turnInverted ? -1.0 : 1.0);
     double turnVelocityRad = turnSim.getAngularVelocityRadPerSec() * (turnInverted ? -1.0 : 1.0);
 
@@ -116,7 +100,6 @@ public class ModuleIOSim implements ModuleIO {
     inputs.turnAppliedVolts = turnAppliedVolts;
     inputs.turnCurrentAmps = Math.abs(turnSim.getCurrentDrawAmps());
 
-    // Update odometry inputs
     inputs.odometryTimestamps = new double[] {Timer.getFPGATimestamp()};
     inputs.odometryDrivePositionsRad = new double[] {inputs.drivePositionRad};
     inputs.odometryTurnPositions = new Rotation2d[] {new Rotation2d(turnPositionRad)};

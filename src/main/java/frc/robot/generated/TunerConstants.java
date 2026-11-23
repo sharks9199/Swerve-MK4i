@@ -10,21 +10,10 @@ import edu.wpi.first.units.measure.LinearVelocity;
 import frc.robot.Constants;
 
 /**
- * Entry point for the swerve module constants expected by the IO layer and by Phoenix Tuner X.
+ * Exposes the swerve configuration required by Phoenix Tuner X and the module IO layer.
  *
- * <p>This class no longer holds its own copy of the configuration. Every value is read from {@link
- * Constants.Swerve}, which is the single source of truth. Before this change the two classes held
- * different values for the same hardware, which made the odometry and the motor configuration
- * disagree. The values that used to live here were:
- *
- * <ul>
- *   <li>Speed at 12 V: 4.5 m/s (now {@link Constants.Swerve#VELOCIDADE_FISICA_A_12V}, 4.20 m/s)
- *   <li>Wheel radius: 0.048 m (now 0.0964 / 2 m)
- *   <li>Drive inertia: 0.025 kg*m^2 (now 0.020) and drive friction: 0.2 V (now 0.25)
- * </ul>
- *
- * <p>If Tuner X regenerates this file, re-apply this delegation or copy the new values into {@link
- * Constants.Swerve}.
+ * <p>Hardware values are sourced from {@link Constants.Swerve}. If this file is regenerated,
+ * restore that delegation to prevent inconsistencies between motor setup and odometry.
  */
 public final class TunerConstants {
 

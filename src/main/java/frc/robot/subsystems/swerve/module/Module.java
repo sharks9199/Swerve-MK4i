@@ -59,17 +59,12 @@ public class Module {
             AlertType.kError);
   }
 
-  // ---------------------------------------------------------------------------
-  // Periodic
-  // ---------------------------------------------------------------------------
-
   /** Updates and logs inputs, converts odometry samples and refreshes disconnect alerts. */
   public void periodic() {
-    //Parte 6
+
     io.updateInputs(inputs);
     Logger.processInputs("Drive/Module" + Integer.toString(index), inputs);
 
-    // Use only the sample indices available in every input array.
     int sampleCount =
         Math.min(
             inputs.odometryTimestamps.length,
@@ -86,17 +81,13 @@ public class Module {
     turnEncoderDisconnectedAlert.set(!inputs.turnEncoderConnected);
   }
 
-  // ---------------------------------------------------------------------------
-  // Control
-  // ---------------------------------------------------------------------------
-
   /**
    * Runs the module toward the given setpoint. The state is optimized and cosine-scaled in place.
    *
    * @param state desired module state
    */
   public void runSetpoint(SwerveModuleState state) {
-    // Avoid turning more than 90 degrees, and reduce speed while the wheel is misaligned.
+
     state.optimize(getAngle());
     state.cosineScale(inputs.turnPosition);
 
@@ -109,10 +100,6 @@ public class Module {
     io.setDriveOpenLoop(0.0);
     io.setTurnOpenLoop(0.0);
   }
-
-  // ---------------------------------------------------------------------------
-  // Measurements
-  // ---------------------------------------------------------------------------
 
   /** Returns the current turn angle of the module. */
   public Rotation2d getAngle() {

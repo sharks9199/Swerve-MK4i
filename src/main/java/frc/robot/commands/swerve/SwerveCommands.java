@@ -57,7 +57,7 @@ public final class SwerveCommands {
 
     return Commands.run(
             () -> {
-              // ----- Read and shape inputs -----
+
               double rawLongitudinal = frenteTras.getAsDouble();
               double rawLateral = lateral.getAsDouble();
               double rawRotation = rotacao.getAsDouble();
@@ -68,22 +68,20 @@ public final class SwerveCommands {
               double rotationInput =
                   MathUtil.applyDeadband(rawRotation, Constants.Swerve.DEADBAND_JOYSTICK);
               boolean giroManual = Math.abs(rotationInput) > 1e-6;
-              // Square the input (keeping its sign) for finer control near the center.
+
               rotationInput = Math.copySign(rotationInput * rotationInput, rotationInput);
 
-              // ----- Choose the angular velocity source -----
               double targetOmega;
               if (giroManual) {
-                // Driver is rotating manually: release heading hold.
+
                 headingController.desativar();
                 targetOmega = rotationInput * Constants.Swerve.VELOCIDADE_ANGULAR_MAXIMA_RAD_S;
               } else if (!transladando) {
-                // Robot is idle: nothing to hold.
+
                 headingController.desativar();
                 targetOmega = 0.0;
               } else {
-                // Translating without rotation input: engage heading hold once the robot
-                // has stopped rotating, so we latch onto a stable heading.
+
                 if (!headingController.estaAtivo()) {
                   if (Math.abs(drive.getYawVelocityRadPerSec())
                       <= Constants.Heading.TOLERANCIA_VELOCIDADE_RAD_S) {
@@ -97,14 +95,13 @@ public final class SwerveCommands {
                         : 0.0;
               }
 
-              // ----- Apply acceleration limits -----
               Translation2d targetVelocity =
                   translation.times(drive.getVelocidadeMaximaAtual());
 
               Translation2d velocity = translationLimiter.calculate(
                   targetVelocity, drive.getAceleracaoMaximaAtual());
-              // Ao ativar o lento durante o movimento, respeita imediatamente
-              // o novo limite de velocidade sem deixar o limiter acima dele.
+
+              // Clamp immediately when slow mode reduces the allowed velocity.
               double limiteVelocidade = drive.getVelocidadeMaximaAtual();
               if (velocity.getNorm() > limiteVelocidade) {
                 velocity = velocity.times(limiteVelocidade / velocity.getNorm());
@@ -114,14 +111,11 @@ public final class SwerveCommands {
               double vy = velocity.getY();
               double omega = omegaLimiter.calculate(targetOmega);
 
-              // ----- Command the drivetrain (field-relative) -----
               drive.runVelocity(
                   ChassisSpeeds.fromFieldRelativeSpeeds(vx, vy, omega, drive.getRotation()));
 
-              // ----- Telemetry -----
               headingController.atualizarDashboard(drive.getHeading(), omega);
 
-              // "Ghost" pose showing where the heading controller is trying to point.
               Rotation2d ghostHeading =
                   headingController.estaAtivo()
                       ? headingController.getHeadingAlvo()
@@ -141,7 +135,7 @@ public final class SwerveCommands {
             drive)
         .finallyDo(
             interrupted -> {
-              // Leave the drivetrain in a clean, stopped state.
+
               headingController.desativar();
               inputProcessor.reset();
               translationLimiter.reset(Translation2d.kZero);

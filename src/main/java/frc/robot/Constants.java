@@ -39,11 +39,6 @@ import edu.wpi.first.wpilibj.RobotBase;
  */
 public final class Constants {
 
-  // ---------------------------------------------------------------------------
-  // Runtime mode
-  // ---------------------------------------------------------------------------
-
-  //Parte 1
   /**
    * Mode used when the code is not running on a real roboRIO. Change to {@code REPLAY} to replay
    * logs.
@@ -63,10 +58,6 @@ public final class Constants {
     REPLAY
   }
 
-  // ---------------------------------------------------------------------------
-  // Driver Station
-  // ---------------------------------------------------------------------------
-
   /** Driver Station controller ports. */
   public static final class Controles {
     public static final int PORTA_DRIVER = 0;
@@ -74,10 +65,6 @@ public final class Constants {
 
     private Controles() {}
   }
-
-  // ---------------------------------------------------------------------------
-  // Power
-  // ---------------------------------------------------------------------------
 
   /** Power / brownout parameters. */
   public static final class Energia {
@@ -87,14 +74,8 @@ public final class Constants {
     private Energia() {}
   }
 
-  // ---------------------------------------------------------------------------
-  // Swerve drivetrain
-  // ---------------------------------------------------------------------------
-
   /** Swerve drivetrain physical properties, limits, gains and module definitions. */
   public static final class Swerve {
-
-    // ----- Physical properties -----
 
     /** Robot mass including battery and bumpers, in kilograms. */
     public static final double MASSA_COM_BATERIA_E_BUMPERS_KG = 34.3;
@@ -109,27 +90,20 @@ public final class Constants {
     /** Estimated robot moment of inertia about the vertical axis, in kg*m^2. */
     public static final double MOMENTO_INERCIA_ESTIMADO_KG_M2 = 2.491;
 
-    // ----- Current limits -----
-
     /** Drive motor stator current limit, in amps. */
     public static final double LIMITE_CORRENTE_TRACAO_AMPERES = 60.0;
 
     /** Steer motor stator current limit, in amps. */
     public static final double LIMITE_CORRENTE_DIRECAO_AMPERES = 40.0;
 
-    // ----- Motion limits -----
+    public static final double VELOCIDADE_MAXIMA_MPS_LENTO = 4.02;
+    public static final double ACELERACAO_MAXIMA_MPS2_LENTO = 7.5;
 
-    // MODO LENTO: preserva a velocidade e aceleracao que o teleoperado ja utilizava.
-    public static final double VELOCIDADE_MAXIMA_MPS_LENTO = 4.02; // m/s
-    public static final double ACELERACAO_MAXIMA_MPS2_LENTO = 7.5; // m/s^2
+    // Experimental limit: 9.20 m/s exceeds the configured 4.20 m/s free speed at 12 V.
+    // Validate actual drivetrain capabilities before using fast mode on hardware.
+    public static final double VELOCIDADE_MAXIMA_MPS_RAPIDO = 9.20;
+    public static final double ACELERACAO_MAXIMA_MPS2_RAPIDO = 13.5;
 
-    // MODO RAPIDO: ajuste estes dois valores quando quiser aumentar o desempenho.
-    // A velocidade provisoria e o limite teorico de 4.20 m/s a 12 V do proprio robo.
-    // A aceleracao continua em 7.5 ate que voce ajuste o modo rapido.
-    public static final double VELOCIDADE_MAXIMA_MPS_RAPIDO = 9.20; // m/s (AJUSTAR)
-    public static final double ACELERACAO_MAXIMA_MPS2_RAPIDO = 13.5; // m/s^2 (AJUSTAR)
-
-    // Limites gerais para o chassi; acompanham o maior dos dois modos.
     public static final double VELOCIDADE_MAXIMA_MPS =
         Math.max(VELOCIDADE_MAXIMA_MPS_LENTO, VELOCIDADE_MAXIMA_MPS_RAPIDO);
     public static final double ACELERACAO_MAXIMA_MPS2 =
@@ -141,15 +115,11 @@ public final class Constants {
     /** Maximum rotational acceleration, in rad/s^2. */
     public static final double ACELERACAO_ANGULAR_MAXIMA_RAD_S2 = Units.degreesToRadians(720.0);
 
-    // ----- Control loop -----
-
     /** Joystick deadband applied to the rotation axis. */
     public static final double DEADBAND_JOYSTICK = 0.03;
 
     /** Robot control loop period, in seconds. */
     public static final double PERIODO_CONTROLE_SEGUNDOS = 0.02;
-
-    // ----- Closed-loop gains -----
 
     private static final Slot0Configs GANHOS_DIRECAO =
         new Slot0Configs()
@@ -163,34 +133,7 @@ public final class Constants {
 
     private static final Slot0Configs GANHOS_TRACAO =
 
-
         new Slot0Configs().withKP(0.2).withKI(0.0).withKD(0.08).withKS(0.24).withKV(0.12);
-
-    /*
-     * Previous copy of the steer/drive gains, kept for reference.
-     *
-     * private static final Slot0Configs GANHOS_DIRECAO =
-     *     new Slot0Configs()
-     *         .withKP(25.0)
-     *         .withKI(0.0)
-     *         .withKD(2.5)
-     *         .withKS(0.0)
-     *         .withKV(0.12)
-     *         .withKA(0.0)
-     *         .withStaticFeedforwardSign(
-     *             StaticFeedforwardSignValue.UseClosedLoopSign
-     *         );
-     *
-     * private static final Slot0Configs GANHOS_TRACAO =
-     *     new Slot0Configs()
-     *         .withKP(0.2)
-     *         .withKI(0.0)
-     *         .withKD(0.08)
-     *         .withKS(0.24)
-     *         .withKV(0.12);
-     */
-
-    // ----- Module hardware configuration -----
 
     private static final ClosedLoopOutputType SAIDA_DIRECAO = ClosedLoopOutputType.Voltage;
 
@@ -231,8 +174,6 @@ public final class Constants {
     /** Theoretical free speed of the drivetrain at 12 V. */
     public static final LinearVelocity VELOCIDADE_FISICA_A_12V = MetersPerSecond.of(4.20);
 
-    // ----- Mechanical ratios and geometry -----
-
     /** Coupling ratio between the steer and drive shafts. */
     private static final double RELACAO_ACOPLAMENTO = 25.0 / 7.0;
 
@@ -250,15 +191,11 @@ public final class Constants {
      */
     private static final Distance RAIO_RODA = Meters.of(0.0964 / 2);
 
-    // ----- Inversion and CAN IDs -----
-
     private static final boolean INVERTER_LADO_ESQUERDO = true;
     private static final boolean INVERTER_LADO_DIREITO = false;
 
     /** CAN ID of the Pigeon 2. */
     private static final int ID_PIGEON = 22;
-
-    // ----- Simulation parameters -----
 
     private static final MomentOfInertia INERCIA_DIRECAO = KilogramSquareMeters.of(0.004);
 
@@ -267,8 +204,6 @@ public final class Constants {
     private static final Voltage ATRITO_DIRECAO = Volts.of(0.2);
 
     private static final Voltage ATRITO_TRACAO = Volts.of(0.25);
-
-    // ----- Drivetrain and CAN bus -----
 
     /** Drivetrain-level constants (CAN bus name, Pigeon 2 ID and configuration). */
     public static final SwerveDrivetrainConstants DRIVETRAIN =
@@ -305,8 +240,6 @@ public final class Constants {
                 .withDriveInertia(INERCIA_TRACAO)
                 .withSteerFrictionVoltage(ATRITO_DIRECAO)
                 .withDriveFrictionVoltage(ATRITO_TRACAO);
-
-    // ----- Module definitions -----
 
     /** Distance of each module from the robot center along each axis. */
     private static final Distance MEIA_DISTANCIA_MODULOS =
@@ -413,10 +346,6 @@ public final class Constants {
     private Swerve() {}
   }
 
-  // ---------------------------------------------------------------------------
-  // Driver input shaping
-  // ---------------------------------------------------------------------------
-
   /** Joystick shaping parameters for teleoperated driving. */
   public static final class ControlesDrive {
     /** Radial deadband applied to the translation stick. */
@@ -436,10 +365,6 @@ public final class Constants {
 
     private ControlesDrive() {}
   }
-
-  // ---------------------------------------------------------------------------
-  // Heading hold
-  // ---------------------------------------------------------------------------
 
   /** Heading-hold controller parameters. */
   public static final class Heading {
@@ -462,10 +387,6 @@ public final class Constants {
     private Heading() {}
   }
 
-  // ---------------------------------------------------------------------------
-  // Autonomous
-  // ---------------------------------------------------------------------------
-
   /** PathPlanner path-following parameters. */
   public static final class Autonomo {
     /** Proportional gain for translation tracking. */
@@ -480,16 +401,10 @@ public final class Constants {
     private Autonomo() {}
   }
 
-  // ---------------------------------------------------------------------------
-  // Vision
-  // ---------------------------------------------------------------------------
-
   /** Limelight / AprilTag vision parameters. */
   public static final class Vision {
     /** NetworkTables name of the Limelight camera. */
     public static final String NOME_LIMELIGHT = "limelight-sharks";
-
-    // ----- Measurement acceptance -----
 
     /** Measurements from tags farther than this are rejected, in meters. */
     public static final double DISTANCIA_MAXIMA_VISAO_METROS = 6.0;
@@ -504,14 +419,10 @@ public final class Constants {
     /** Maximum pose ambiguity at which a single tag may be used for heading. */
     public static final double AMBIGUIDADE_MAXIMA_TAG_UNICA_HEADING = 0.15;
 
-    // ----- MegaTag 1 standard deviations -----
-
     public static final double MT1_DESVIO_XY_MULTIPLAS_TAGS_METROS = 0.45;
     public static final double MT1_DESVIO_XY_TAG_UNICA_METROS = 0.80;
     public static final double MT1_DESVIO_THETA_MULTIPLAS_TAGS_RAD = Units.degreesToRadians(4.0);
     public static final double MT1_DESVIO_THETA_TAG_UNICA_RAD = Units.degreesToRadians(10.0);
-
-    // ----- MegaTag 2 standard deviations -----
 
     public static final double MT2_DESVIO_XY_MULTIPLAS_TAGS_METROS = 0.30;
     public static final double MT2_DESVIO_XY_TAG_UNICA_METROS = 0.70;

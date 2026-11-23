@@ -22,7 +22,6 @@ public class GyroIOReal implements GyroIO {
   private final StatusSignal<Angle> yaw = pigeon.getYaw();
   private final StatusSignal<AngularVelocity> yawVelocity = pigeon.getAngularVelocityZWorld();
 
-  // High-frequency samples produced by the odometry thread.
   private final Queue<Double> yawPositionQueue;
   private final Queue<Double> yawTimestampQueue;
 
@@ -50,7 +49,6 @@ public class GyroIOReal implements GyroIO {
 
     inputs.yawVelocityRadPerSec = Units.degreesToRadians(yawVelocity.getValueAsDouble());
 
-    // Drain the odometry queues filled by the odometry thread.
     inputs.odometryYawTimestamps = yawTimestampQueue.stream().mapToDouble(value -> value).toArray();
 
     inputs.odometryYawPositions =

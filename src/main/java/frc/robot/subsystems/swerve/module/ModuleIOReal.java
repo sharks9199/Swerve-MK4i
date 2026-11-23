@@ -20,7 +20,7 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.signals.SensorDirectionValue;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
-// import com.revrobotics.spark.SparkMax;
+
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
@@ -45,24 +45,14 @@ public class ModuleIOReal implements ModuleIO {
           TalonFXConfiguration, TalonFXConfiguration, CANcoderConfiguration>
       constants;
 
-  // ---------------------------------------------------------------------------
-  // Hardware
-  // ---------------------------------------------------------------------------
-
   private final TalonFX driveTalon;
   private final TalonFX turnTalon;
   private final CANcoder cancoder;
 
-  // ---------------------------------------------------------------------------
-  // Control requests
-  // ---------------------------------------------------------------------------
-
-  // Voltage control requests
   private final VoltageOut voltageRequest = new VoltageOut(0);
   private final PositionVoltage positionVoltageRequest = new PositionVoltage(0.0);
   private final VelocityVoltage velocityVoltageRequest = new VelocityVoltage(0.0);
 
-  // Torque-current control requests
   private final TorqueCurrentFOC torqueCurrentRequest = new TorqueCurrentFOC(0);
 
   @SuppressWarnings("unused")
@@ -72,21 +62,14 @@ public class ModuleIOReal implements ModuleIO {
   private final VelocityTorqueCurrentFOC velocityTorqueCurrentRequest =
       new VelocityTorqueCurrentFOC(0.0);
 
-  // ---------------------------------------------------------------------------
-  // Status signals
-  // ---------------------------------------------------------------------------
-
-  // Timestamp inputs from the Phoenix odometry thread
   private final Queue<Double> timestampQueue;
 
-  // Inputs from the drive motor
   private final StatusSignal<Angle> drivePosition;
   private final Queue<Double> drivePositionQueue;
   private final StatusSignal<AngularVelocity> driveVelocity;
   private final StatusSignal<Voltage> driveAppliedVolts;
   private final StatusSignal<Current> driveCurrent;
 
-  // Inputs from the turn motor
   private final StatusSignal<Angle> turnAbsolutePosition;
   private final StatusSignal<Angle> turnPosition;
   private final Queue<Double> turnPositionQueue;
@@ -94,7 +77,6 @@ public class ModuleIOReal implements ModuleIO {
   private final StatusSignal<Voltage> turnAppliedVolts;
   private final StatusSignal<Current> turnCurrent;
 
-  // Connection debouncers
   private final Debouncer driveConnectedDebounce = new Debouncer(0.5);
   private final Debouncer turnConnectedDebounce = new Debouncer(0.5);
   private final Debouncer turnEncoderConnectedDebounce = new Debouncer(0.5);
@@ -112,7 +94,6 @@ public class ModuleIOReal implements ModuleIO {
     turnTalon = new TalonFX(constants.SteerMotorId, Constants.Swerve.CAN_BUS);
     cancoder = new CANcoder(constants.EncoderId, Constants.Swerve.CAN_BUS);
 
-    // ----- Configure drive motor -----
     var driveConfig = constants.DriveMotorInitialConfigs;
     driveConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
     driveConfig.Slot0 = constants.DriveMotorGains;
@@ -128,7 +109,6 @@ public class ModuleIOReal implements ModuleIO {
     tryUntilOk(5, () -> driveTalon.getConfigurator().apply(driveConfig, 0.25));
     tryUntilOk(5, () -> driveTalon.setPosition(0.0, 0.25));
 
-    // ----- Configure turn motor -----
     var turnConfig = new TalonFXConfiguration();
     turnConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
     turnConfig.Slot0 = constants.SteerMotorGains;
@@ -154,7 +134,6 @@ public class ModuleIOReal implements ModuleIO {
             : InvertedValue.CounterClockwise_Positive;
     tryUntilOk(5, () -> turnTalon.getConfigurator().apply(turnConfig, 0.25));
 
-    // ----- Configure CANcoder -----
     CANcoderConfiguration cancoderConfig = constants.EncoderInitialConfigs;
     cancoderConfig.MagnetSensor.MagnetOffset = constants.EncoderOffset;
     cancoderConfig.MagnetSensor.SensorDirection =
@@ -163,17 +142,14 @@ public class ModuleIOReal implements ModuleIO {
             : SensorDirectionValue.CounterClockwise_Positive;
     cancoder.getConfigurator().apply(cancoderConfig);
 
-    // ----- Create timestamp queue -----
     timestampQueue = SwerveOdometry.getInstance().makeTimestampQueue();
 
-    // ----- Create drive status signals -----
     drivePosition = driveTalon.getPosition();
     drivePositionQueue = SwerveOdometry.getInstance().registerSignal(driveTalon.getPosition());
     driveVelocity = driveTalon.getVelocity();
     driveAppliedVolts = driveTalon.getMotorVoltage();
     driveCurrent = driveTalon.getStatorCurrent();
 
-    // ----- Create turn status signals -----
     turnAbsolutePosition = cancoder.getAbsolutePosition();
     turnPosition = turnTalon.getPosition();
     turnPositionQueue = SwerveOdometry.getInstance().registerSignal(turnTalon.getPosition());
@@ -181,7 +157,6 @@ public class ModuleIOReal implements ModuleIO {
     turnAppliedVolts = turnTalon.getMotorVoltage();
     turnCurrent = turnTalon.getStatorCurrent();
 
-    // ----- Configure periodic frames -----
     BaseStatusSignal.setUpdateFrequencyForAll(
         Drive.ODOMETRY_FREQUENCY, drivePosition, turnPosition);
     BaseStatusSignal.setUpdateFrequencyForAll(
@@ -196,27 +171,21 @@ public class ModuleIOReal implements ModuleIO {
     ParentDevice.optimizeBusUtilizationForAll(driveTalon, turnTalon);
   }
 
-  // ---------------------------------------------------------------------------
-  // ModuleIO implementation
-  // ---------------------------------------------------------------------------
-
   @Override
   public void updateInputs(ModuleIOInputs inputs) {
-    // Refresh all signals
+
     var driveStatus =
         BaseStatusSignal.refreshAll(drivePosition, driveVelocity, driveAppliedVolts, driveCurrent);
     var turnStatus =
         BaseStatusSignal.refreshAll(turnPosition, turnVelocity, turnAppliedVolts, turnCurrent);
     var turnEncoderStatus = BaseStatusSignal.refreshAll(turnAbsolutePosition);
 
-    // Update drive inputs
     inputs.driveConnected = driveConnectedDebounce.calculate(driveStatus.isOK());
     inputs.drivePositionRad = Units.rotationsToRadians(drivePosition.getValueAsDouble());
     inputs.driveVelocityRadPerSec = Units.rotationsToRadians(driveVelocity.getValueAsDouble());
     inputs.driveAppliedVolts = driveAppliedVolts.getValueAsDouble();
     inputs.driveCurrentAmps = driveCurrent.getValueAsDouble();
 
-    // Update turn inputs
     inputs.turnConnected = turnConnectedDebounce.calculate(turnStatus.isOK());
     inputs.turnEncoderConnected = turnEncoderConnectedDebounce.calculate(turnEncoderStatus.isOK());
     inputs.turnAbsolutePosition = Rotation2d.fromRotations(turnAbsolutePosition.getValueAsDouble());
@@ -225,7 +194,6 @@ public class ModuleIOReal implements ModuleIO {
     inputs.turnAppliedVolts = turnAppliedVolts.getValueAsDouble();
     inputs.turnCurrentAmps = turnCurrent.getValueAsDouble();
 
-    // Update odometry inputs
     inputs.odometryTimestamps =
         timestampQueue.stream().mapToDouble((Double value) -> value).toArray();
     inputs.odometryDrivePositionsRad =

@@ -23,10 +23,6 @@
    */
   public class VisionIOSim implements VisionIO {
 
-    // ---------------------------------------------------------------------------
-    // Camera model
-    // ---------------------------------------------------------------------------
-
     /** Camera pose relative to the robot center (default: 0.3 m forward, facing forward). */
     private static final Transform2d ROBOT_TO_CAMERA =
         new Transform2d(new Translation2d(0.3, 0.0), Rotation2d.kZero);
@@ -43,25 +39,17 @@
     /** Pipeline plus capture latency, in seconds. */
     private static final double LATENCY_SECONDS = 0.030;
 
-    // ---------------------------------------------------------------------------
-    // Measurement noise
-    // ---------------------------------------------------------------------------
-
     /** Position noise standard deviation per meter of tag distance (MegaTag 2). */
-    private static final double MT2_XY_NOISE_PER_METER = 0.02;
+    private static final double MT2_XY_NOISE_PER_METER = 0.004;
 
     /** Position noise standard deviation per meter of tag distance (MegaTag 1). */
-    private static final double MT1_XY_NOISE_PER_METER = 0.05;
+    private static final double MT1_XY_NOISE_PER_METER = 0.005;
 
     /** Heading noise standard deviation of MegaTag 1, in degrees. */
-    private static final double MT1_HEADING_NOISE_DEG = 2.0;
+    private static final double MT1_HEADING_NOISE_DEG = 1.0;
 
     /** Ambiguity reported for a single, well-seen tag. */
-    private static final double SINGLE_TAG_AMBIGUITY = 0.05;
-
-    // ---------------------------------------------------------------------------
-    // State
-    // ---------------------------------------------------------------------------
+    private static final double SINGLE_TAG_AMBIGUITY = 0.007;
 
     private final AprilTagFieldLayout layout =
         AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
@@ -69,8 +57,6 @@
     private final Random random = new Random(0);
 
     private double lastFrameTime = -1.0;
-
-    // Values written by Vision, kept for debugging (MegaTag 2 uses them on a real Limelight).
 
     @SuppressWarnings("unused")
     private int pipeline = 0;
@@ -100,13 +86,10 @@
       robotYawRateDegPerSec = yawRateGrausPorSegundo;
     }
 
-    //Parte 9
     @Override
     public void updateInputs(VisionIOInputs inputs) {
       double now = Timer.getFPGATimestamp();
 
-      // Between frames, keep the previous values (the timestamp does not change, so Vision
-      // ignores the repeated measurement, as with a real Limelight).
       if (lastFrameTime >= 0.0 && now - lastFrameTime < 1.0 / FRAME_RATE_HZ) {
         return;
       }
@@ -129,13 +112,11 @@
           continue;
         }
 
-        // Inside the camera's horizontal field of view?
         Rotation2d bearing = cameraToTag.getAngle().minus(cameraPose.getRotation());
         if (Math.abs(bearing.getDegrees()) > HORIZONTAL_FOV_DEG / 2.0) {
           continue;
         }
 
-        // Is the tag facing the camera? (the tag's X axis points out of its face)
         Rotation2d viewAngle = cameraToTag.unaryMinus().getAngle().minus(tagPose.getRotation());
         if (Math.abs(viewAngle.getDegrees()) > MAX_TAG_VIEW_ANGLE_DEG) {
           continue;
@@ -146,11 +127,10 @@
         if (distance < closestDistance) {
           closestDistance = distance;
           closestId = tag.ID;
-          closestTxDeg = -bearing.getDegrees(); // Limelight tx is positive to the right.
+          closestTxDeg = -bearing.getDegrees();
         }
       }
 
-      // ----- General target data -----
       inputs.temAlvo = visibleCount > 0;
       inputs.aprilTagID = closestId;
       inputs.tx = visibleCount > 0 ? closestTxDeg : 0.0;
@@ -168,8 +148,7 @@
       double ambiguity = visibleCount >= 2 ? 0.0 : SINGLE_TAG_AMBIGUITY;
       double timestamp = now - LATENCY_SECONDS;
 
-      // ----- MegaTag 2: heading comes from the gyro, so only position is noisy -----
-      double mt2Noise = MT2_XY_NOISE_PER_METER * averageDistance;
+      double mt2Noise = 0;
       inputs.poseMegaTag2 =
           new Pose2d(
               robotPose.getX() + random.nextGaussian() * mt2Noise,
@@ -180,7 +159,6 @@
       inputs.distanciaMediaTagsMegaTag2 = averageDistance;
       inputs.ambiguidadeMinimaMegaTag2 = ambiguity;
 
-      // ----- MegaTag 1: position and heading both estimated from the tags -----
       double mt1Noise = MT1_XY_NOISE_PER_METER * averageDistance;
       inputs.poseMegaTag1 =
           new Pose2d(

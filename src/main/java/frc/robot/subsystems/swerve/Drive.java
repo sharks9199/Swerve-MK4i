@@ -55,10 +55,6 @@ import org.littletonrobotics.junction.Logger;
  */
 public class Drive extends SubsystemBase {
 
-  // ---------------------------------------------------------------------------
-  // Constants
-  // ---------------------------------------------------------------------------
-
   private final Field2d arena = new Field2d();
   /** Odometry sampling frequency, in Hz (250 on CAN FD, 100 on classic CAN). */
   public static final double ODOMETRY_FREQUENCY =
@@ -66,10 +62,6 @@ public class Drive extends SubsystemBase {
 
   /** Guards the odometry queues shared between the main loop and the odometry thread. */
   static final Lock odometryLock = new ReentrantLock();
-
-  // ---------------------------------------------------------------------------
-  // State
-  // ---------------------------------------------------------------------------
 
   private final GyroIO gyroIO;
   private final GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
@@ -81,7 +73,7 @@ public class Drive extends SubsystemBase {
       OffsetsConstants.Pigeon.APLICAR_OFFSET_NO_SOFTWARE
           ? Rotation2d.fromDegrees(OffsetsConstants.Pigeon.YAW.in(Degrees))
           : Rotation2d.kZero;
-  private final Module[] modules = new Module[4]; // FL, FR, BL, BR
+  private final Module[] modules = new Module[4];
   private final SwerveDriveKinematics kinematics =
       new SwerveDriveKinematics(getModuleTranslations());
   private final Alert gyroDisconnectedAlert =
@@ -92,14 +84,11 @@ public class Drive extends SubsystemBase {
   private Rotation2d driverGyroOffset =
       Rotation2d.fromDegrees(OffsetsConstants.Driver.FRENTE_GRAUS);
 
-  // Inicialmente em modo rapido. O botao A alterna para lento e vice-versa.
   private boolean modoLentoAtivo = false;
 
-  // Autonomous heading control (shared with teleop through RobotContainer).
   private HeadingController headingControllerAutonomo = null;
   private Rotation2d alvoHeadingAutonomo = null;
 
-  // Notified with the heading correction produced by each vision measurement.
   private Consumer<Rotation2d> headingCorrectionListener = correcao -> {};
 
   private SwerveModulePosition[] lastModulePositions = {
@@ -110,10 +99,6 @@ public class Drive extends SubsystemBase {
   };
   private final SwerveDrivePoseEstimator poseEstimator =
       new SwerveDrivePoseEstimator(kinematics, rawGyroRotation, lastModulePositions, new Pose2d());
-
-  // ---------------------------------------------------------------------------
-  // Construction
-  // ---------------------------------------------------------------------------
 
   /**
    * Creates the drive subsystem.
@@ -136,17 +121,15 @@ public class Drive extends SubsystemBase {
     modules[2] = new Module(backLeft, 2, Constants.Swerve.BACK_LEFT);
     modules[3] = new Module(backRight, 3, Constants.Swerve.BACK_RIGHT);
 
-    // Usage reporting (AdvantageKit swerve template).
     HAL.report(tResourceType.kResourceType_RobotDrive, tInstances.kRobotDriveSwerve_AdvantageKit);
 
-    // Start the odometry thread.
     SwerveOdometry.getInstance().start();
     SmartDashboard.putData("Arena", arena);
 
     try {
       configurarAutonomo();
     } catch (Exception e) {
-      // A PathPlanner failure must never bring down teleop.
+
       DriverStation.reportError(
           "Falha ao configurar o autonomo: " + e.getMessage(), e.getStackTrace());
     }
@@ -159,7 +142,6 @@ public class Drive extends SubsystemBase {
         Constants.Swerve.VELOCIDADE_ANGULAR_MAXIMA_RAD_S);
   }
 
-  //Parte 4
   /**
    * Creates a {@link Drive} with the IO implementations matching the current runtime mode.
    *
@@ -219,7 +201,7 @@ public class Drive extends SubsystemBase {
             new PIDConstants(Constants.Autonomo.KP_TRANSLACAO, 0.0, 0.0),
             new PIDConstants(Constants.Autonomo.KP_ROTACAO, 0.0, 0.0)),
         config,
-        // Mirror paths for the red alliance.
+
         Drive::isRedAlliance,
         this);
 
@@ -227,15 +209,11 @@ public class Drive extends SubsystemBase {
         path -> Logger.recordOutput("Autonomo/Trajetoria", path.toArray(new Pose2d[0])));
     PathPlannerLogging.setLogTargetPoseCallback(
         pose -> {
-          // The target pose rotation is the heading the path wants at this instant.
+
           alvoHeadingAutonomo = pose.getRotation();
           Logger.recordOutput("Autonomo/PoseAlvo", pose);
         });
   }
-
-  // ---------------------------------------------------------------------------
-  // Autonomous heading control
-  // ---------------------------------------------------------------------------
 
   /**
    * Makes path following use the given {@link HeadingController} for rotation, exactly like
@@ -271,13 +249,13 @@ public class Drive extends SubsystemBase {
    */
   private void runVelocityAutonomo(ChassisSpeeds speeds) {
     if (headingControllerAutonomo == null || alvoHeadingAutonomo == null) {
-      // No heading target available: fall back to PathPlanner's own rotation output.
+
       runVelocity(speeds);
       return;
     }
 
     if (!headingControllerAutonomo.estaAtivo()) {
-      // First cycle: start the motion profile from the measured heading and yaw rate.
+
       headingControllerAutonomo.definirHeading(
           alvoHeadingAutonomo, getHeading(), getYawVelocityRadPerSec());
     } else {
@@ -293,13 +271,9 @@ public class Drive extends SubsystemBase {
     runVelocity(new ChassisSpeeds(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond, omega));
   }
 
-  // ---------------------------------------------------------------------------
-  // Periodic
-  // ---------------------------------------------------------------------------
-
   @Override
   public void periodic() {
-    // Update inputs while holding the lock so the odometry thread cannot modify the queues.
+
     odometryLock.lock();
     try {
       gyroIO.updateInputs(gyroInputs);
@@ -312,7 +286,6 @@ public class Drive extends SubsystemBase {
       odometryLock.unlock();
     }
 
-    // Stop all modules while the robot is disabled.
     if (DriverStation.isDisabled()) {
       for (Module module : modules) {
         module.stop();
@@ -321,13 +294,11 @@ public class Drive extends SubsystemBase {
       Logger.recordOutput("SwerveStates/SetpointsOptimized", new SwerveModuleState[] {});
     }
 
-    atualizarOdometria(); //ATUALIZAR ODOMETRIA
+    atualizarOdometria();
     arena.setRobotPose(getPose());
-    
-    
+
     gyroDisconnectedAlert.set(!gyroInputs.connected && Constants.MODO_ATUAL != Constants.Mode.SIM);
 
-    //Parte 8
     Logger.recordOutput("Odometry/Robot", getPose());
     SmartDashboard.putData("Arena", arena);
     Logger.recordOutput("TESTE/PoseX", getPose().getX());
@@ -355,7 +326,6 @@ public class Drive extends SubsystemBase {
                   modules[modulo].getOdometryPositions().length));
     }
 
-    //Parte 7
     boolean gyroSamplesAvailable =
         gyroInputs.connected
             && gyroInputs.odometryYawPositions.length >= sampleCount
@@ -376,15 +346,13 @@ public class Drive extends SubsystemBase {
       if (gyroSamplesAvailable) {
         rawGyroRotation = gyroInputs.odometryYawPositions[amostra].plus(hardwareGyroOffset);
       } else {
-        // Fall back to wheel kinematics when the gyro is disconnected or its sample batch is
-        // incomplete. This preserves odometry updates.
+
         Twist2d twist = kinematics.toTwist2d(deltas);
         rawGyroRotation = rawGyroRotation.plus(new Rotation2d(twist.dtheta));
       }
 
       poseEstimator.updateWithTime(timestamps[amostra], rawGyroRotation, posicoes);
 
-      // Update the baseline only after all module deltas for this sample are computed.
       for (int modulo = 0; modulo < modules.length; modulo++) {
         lastModulePositions[modulo] = posicoes[modulo];
       }
@@ -393,10 +361,6 @@ public class Drive extends SubsystemBase {
     Logger.recordOutput("Odometry/SampleCount", sampleCount);
     Logger.recordOutput("Odometry/GyroSamplesAvailable", gyroSamplesAvailable);
   }
-
-  // ---------------------------------------------------------------------------
-  // Control
-  // ---------------------------------------------------------------------------
 
   /**
    * Drives the robot at the given robot-relative chassis speeds.
@@ -429,7 +393,7 @@ public class Drive extends SubsystemBase {
     if (Math.abs(velocidadesDiscretas.vxMetersPerSecond) < 1e-9
         && Math.abs(velocidadesDiscretas.vyMetersPerSecond) < 1e-9
         && Math.abs(velocidadesDiscretas.omegaRadiansPerSecond) < 1e-9) {
-      // Zero command: keep the current wheel angles so the modules do not snap back to zero.
+
       SwerveModuleState[] estadosAtuais = getModuleStates();
       estadosDesejados = new SwerveModuleState[4];
       for (int i = 0; i < 4; i++) {
@@ -445,7 +409,6 @@ public class Drive extends SubsystemBase {
     Logger.recordOutput("SwerveStates/Setpoints", estadosDesejados);
     Logger.recordOutput("SwerveChassisSpeeds/Setpoints", velocidadesDiscretas);
 
-    // Each module optimizes its own setpoint in place.
     for (int i = 0; i < modules.length; i++) {
       modules[i].runSetpoint(estadosDesejados[i]);
     }
@@ -481,10 +444,6 @@ public class Drive extends SubsystemBase {
         ? Constants.Swerve.ACELERACAO_MAXIMA_MPS2_LENTO
         : Constants.Swerve.ACELERACAO_MAXIMA_MPS2_RAPIDO;
   }
-
-  // ---------------------------------------------------------------------------
-  // Pose and heading
-  // ---------------------------------------------------------------------------
 
   /**
    * Resets the robot pose on the field (used by autonomous at the stDNJart of a path).
@@ -549,14 +508,10 @@ public class Drive extends SubsystemBase {
     return correcaoHeading;
   }
 
-  // ---------------------------------------------------------------------------
-  // Accessors
-  // ---------------------------------------------------------------------------
-
   /** Returns the estimated robot pose on the field. */
   @AutoLogOutput(key = "Odometry/Robot")
   public Pose2d getPose() {
-    return poseEstimator.getEstimatedPosition(); //-> X, Y, Giro
+    return poseEstimator.getEstimatedPosition();
   }
 
   /**

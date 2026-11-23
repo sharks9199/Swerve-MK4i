@@ -2,12 +2,11 @@ package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.button.CommandPS5Controller;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.commands.swerve.SwerveCommands;
 import frc.robot.subsystems.swerve.Drive;
@@ -16,198 +15,132 @@ import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.vision.VisionIOReal;
 import frc.robot.subsystems.vision.VisionIOSim;
+import frc.robot.util.RobotComponents;
 
-/**
- * Declares the robot's structure: subsystems, controllers, button bindings and the autonomous
- * chooser. Very little robot logic should live here; it belongs in subsystems and commands.
- */
+/** Configures robot subsystems, Xbox driver inputs, and autonomous commands. */
 public class RobotContainer {
 
-  // ---------------------------------------------------------------------------
-  // Subsystems and controllers
-  // ---------------------------------------------------------------------------
+    private final Drive swerve = Drive.criarSwerve();
+    private final HeadingController headingController = new HeadingController();
 
-  private final Drive swerve = Drive.criarSwerve();
-  private final HeadingController headingController = new HeadingController();
-
-  //Parte 9   
-  /** AprilTag localization; it fuses its measurements into the swerve pose estimator. */
-  @SuppressWarnings("unused")
-  private final Vision vision =
-      new Vision(
-          swerve,
-          switch (Constants.MODO_ATUAL) {
+    @SuppressWarnings("unused")
+    private final Vision vision = new Vision(
+        swerve,
+        switch (Constants.MODO_ATUAL) {
             case REAL -> new VisionIOReal();
             case SIM -> new VisionIOSim(swerve::getPose);
             case REPLAY -> new VisionIO() {};
-          });
-
-          
-
-  private static final int PORTA_DRIVER = 0;
-  private static final int PORTA_OPERADOR = 1;
-
-  //dois controle usando a mesma porta
-  private final CommandPS5Controller controleDoDriverPS5 =
-      new CommandPS5Controller(PORTA_DRIVER);
-
-  private final CommandXboxController controleDoDriverXbox =
-      new CommandXboxController(PORTA_DRIVER);
-
-  @SuppressWarnings("unused")
-  private final CommandXboxController controleOperador =
-    new CommandXboxController(PORTA_OPERADOR);
-
-  private boolean usandoPS5() {
-      return DriverStation.isJoystickConnected(PORTA_DRIVER)
-          && !DriverStation.getJoystickIsXbox(PORTA_DRIVER);
-  }
-  private boolean usandoXbox() {
-      return DriverStation.isJoystickConnected(PORTA_DRIVER)
-          && DriverStation.getJoystickIsXbox(PORTA_DRIVER);
-  }
-
-      
-    
-
-  // ---------------------------------------------------------------------------
-  // Dashboard
-  // ---------------------------------------------------------------------------
-
-  private final SendableChooser<Command> meuSeletorAuto;
-
-  /** Builds the autonomous chooser, publishes it to the dashboard and wires up the controls. */
-  public RobotContainer() {
-    // The same heading controller is shared by teleop and autonomous path following.
-    swerve.usarHeadingControllerNoAutonomo(headingController);
-
-    // Keep the heading goal consistent when vision corrects the estimated rotation.
-    swerve.setHeadingCorrectionListener(headingController::aplicarCorrecaoReferencia);
-
-    // Named commands must be registered BEFORE the autonomous chooser is built.
-    configureNamedCommands();
-
-    // Publish the autonomous chooser to the dashboard (Elastic).
-    meuSeletorAuto = doAutoSelector();
-    SmartDashboard.putData("Autonomo/Seletor", meuSeletorAuto);
-
-    configureBindings();
-    configureButtons();
-    
-  }
-
-  // ---------------------------------------------------------------------------
-  // Bindings
-  // ---------------------------------------------------------------------------
-
-  /** Sets the default drive command (field-relative teleop with heading hold). */
-
-private void configureBindings() {
-    swerve.setDefaultCommand(
-        SwerveCommands.movimentacaoDrive(
-            swerve,
-            headingController,
-
-            () -> usandoPS5()
-                ? -controleDoDriverPS5.getLeftY()
-                : usandoXbox()
-                    ? -controleDoDriverXbox.getLeftY()
-                    : 0.0,
-
-            () -> usandoPS5()
-                ? -controleDoDriverPS5.getLeftX()
-                : usandoXbox()
-                    ? -controleDoDriverXbox.getLeftX()
-                    : 0.0,
-
-            () -> usandoPS5()
-                ? -controleDoDriverPS5.getRightX()
-                : usandoXbox()
-                    ? -controleDoDriverXbox.getRightX()
-                    : 0.0
-        )
+        }
     );
-}
 
+    private final XboxController driverController =
+        new XboxController(Constants.Controles.PORTA_DRIVER);
 
-  /** Binds driver controller buttons to commands. */
+    private final SendableChooser<Command> meuSeletorAuto;
 
-public void configureButtons() {
+    public RobotContainer() {
+        swerve.usarHeadingControllerNoAutonomo(headingController);
+        swerve.setHeadingCorrectionListener(headingController::aplicarCorrecaoReferencia);
 
-    new Trigger(this::usandoPS5)
-        .and(controleDoDriverPS5.options())
-        .onTrue(Commands.runOnce(this::zerarGuinada));
+        configureNamedCommands();
+        meuSeletorAuto = doAutoSelector();
+        SmartDashboard.putData("Autonomo/Seletor", meuSeletorAuto);
 
-    new Trigger(this::usandoXbox)
-        .and(controleDoDriverXbox.start())
-        .onTrue(Commands.runOnce(this::zerarGuinada));
-
-    new Trigger(this::usandoPS5)
-        .and(controleDoDriverPS5.cross())
-        .onTrue(Commands.runOnce(swerve::alternarModoLento));
-
-    new Trigger(this::usandoXbox)
-        .and(controleDoDriverXbox.a())
-        .onTrue(Commands.runOnce(swerve::alternarModoLento));
-}   
-
-
-  // ---------------------------------------------------------------------------
-  // Autonomous
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Registers commands that PathPlanner paths and autos can trigger by name (event markers, named
-   * commands). Register them here, before {@link #doAutoSelector()} runs.
-   */
-  private void configureNamedCommands() {
-    // Example: NamedCommands.registerCommand("Shoot", shooter.shootCommand());
-  }
-
-  /**
-   * Builds the PathPlanner autonomous chooser.
-   *
-   * <p>If PathPlanner fails to load, the error is reported to the Driver Station and a chooser
-   * containing only a "do nothing" routine is returned, so the robot code never crashes at startup.
-   *
-   * @return the autonomous chooser, never {@code null}
-   */
-  private SendableChooser<Command> doAutoSelector() {
-    try {
-      return AutoBuilder.buildAutoChooser();
-    } catch (Exception e) {
-      DriverStation.reportError("Erro ao criar o Autônomo: " + e.getMessage(), e.getStackTrace());
-
-      SendableChooser<Command> autonomoVazio = new SendableChooser<>();
-      autonomoVazio.setDefaultOption("Nenhum Autônomo", Commands.none());
-      return autonomoVazio;
+        configureBindings();
+        configureButtons();
     }
-  }
 
-  /**
-   * Returns the command to run in autonomous.
-   *
-   * @return the selected autonomous command, or {@link Commands#none()} if nothing is selected
-   */
-  public Command getAutonomousCommand() {
-    Command autoSelecionado = meuSeletorAuto.getSelected();
-    return autoSelecionado != null ? autoSelecionado : Commands.none();
-  }
+    private void configureBindings() {
+        swerve.setDefaultCommand(
+            SwerveCommands.movimentacaoDrive(
+                swerve,
+                headingController,
+                () -> -driverController.getLeftY(),
+                () -> -driverController.getLeftX(),
+                () -> -driverController.getRightX()
+            )
+        );
+    }
 
-  // ---------------------------------------------------------------------------
-  // Actions
+    /**
+     * Xbox bindings: Start resets yaw, A toggles slow mode, and the D-pad selects
+     * L1 (down), L2 (left), L3 (right), or L4 (up) during enabled teleop.
+     */
+    public void configureButtons() {
+        new Trigger(driverController::getStartButton)
+            .onTrue(Commands.runOnce(this::zerarGuinada));
 
-  // ---------------------------------------------------------------------------
+        new Trigger(driverController::getAButton)
+            .onTrue(Commands.runOnce(swerve::alternarModoLento));
 
-  /** Called when autonomous ends: drops the path heading target and heading-hold goal. */
-  public void aoFinalizarAutonomo() {
-    swerve.limparAlvoAutonomo();
-    headingController.desativar();
-  }
+        // Elevator presets are only available while teleoperated control is enabled.
+        Trigger teleop = new Trigger(DriverStation::isTeleopEnabled);
 
-  /** Resets the field-relative heading and disables the heading-hold controller. */
-  public void zerarGuinada() {
-    swerve.zerarOrientacaO();
-    headingController.desativar();
-  }
+        teleop.and(() -> driverController.getPOV() == 180)
+            .onTrue(Commands.runOnce(() ->
+                RobotComponents.selecionarPresetElevador(RobotState.PresetElevador.L1)));
+
+        teleop.and(() -> driverController.getPOV() == 270)
+            .onTrue(Commands.runOnce(() ->
+                RobotComponents.selecionarPresetElevador(RobotState.PresetElevador.L2)));
+
+        teleop.and(() -> driverController.getPOV() == 90)
+            .onTrue(Commands.runOnce(() ->
+                RobotComponents.selecionarPresetElevador(RobotState.PresetElevador.L3)));
+
+        teleop.and(() -> driverController.getPOV() == 0)
+            .onTrue(Commands.runOnce(() ->
+                RobotComponents.selecionarPresetElevador(RobotState.PresetElevador.L4)));
+    }
+
+    /** Updates visualization-only mechanism targets from the Xbox controller. */
+    public void atualizarPosesPeloControle() {
+        boolean teleop = DriverStation.isTeleopEnabled();
+
+        boolean subirElevador = teleop && driverController.getRightBumperButton();
+        boolean descerElevador = teleop && driverController.getLeftBumperButton();
+        boolean abaixarIntake = teleop && driverController.getBButton();
+        boolean levantarIntake = teleop && driverController.getXButton();
+
+        RobotComponents.atualizarPeloControle(
+            subirElevador,
+            descerElevador,
+            abaixarIntake,
+            levantarIntake
+        );
+    }
+
+    private void configureNamedCommands() {
+        // Register PathPlanner event commands here when needed.
+    }
+
+    private SendableChooser<Command> doAutoSelector() {
+        try {
+            return AutoBuilder.buildAutoChooser();
+        } catch (Exception e) {
+            DriverStation.reportError(
+                "Erro ao criar o Autonomo: " + e.getMessage(),
+                e.getStackTrace()
+            );
+
+            SendableChooser<Command> autonomoVazio = new SendableChooser<>();
+            autonomoVazio.setDefaultOption("Nenhum Autonomo", Commands.none());
+            return autonomoVazio;
+        }
+    }
+
+    public Command getAutonomousCommand() {
+        Command autoSelecionado = meuSeletorAuto.getSelected();
+        return autoSelecionado != null ? autoSelecionado : Commands.none();
+    }
+
+    public void aoFinalizarAutonomo() {
+        swerve.limparAlvoAutonomo();
+        headingController.desativar();
+    }
+
+    public void zerarGuinada() {
+        swerve.zerarOrientacaO();
+        headingController.desativar();
+    }
 }

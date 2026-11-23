@@ -60,14 +60,12 @@ public final class SnapController {
     double absLongitudinal = Math.abs(longitudinal);
     double absLateral = Math.abs(lateral);
 
-    // Stick too close to center: release any snap.
     if (Math.max(absLongitudinal, absLateral)
         < Constants.ControlesDrive.EIXO_PRINCIPAL_MINIMO_SNAP) {
       snapAxis = SnapAxis.NONE;
       return;
     }
 
-    // Already snapped: stay snapped until the secondary axis exceeds the exit threshold.
     if (snapAxis == SnapAxis.LONGITUDINAL) {
       if (absLateral > Constants.ControlesDrive.EIXO_SECUNDARIO_SAIR_SNAP) {
         snapAxis = SnapAxis.NONE;
@@ -82,7 +80,6 @@ public final class SnapController {
       return;
     }
 
-    // Not snapped: engage when the secondary axis is small enough.
     if (absLongitudinal >= absLateral
         && absLateral <= Constants.ControlesDrive.EIXO_SECUNDARIO_ENTRAR_SNAP) {
       snapAxis = SnapAxis.LONGITUDINAL;

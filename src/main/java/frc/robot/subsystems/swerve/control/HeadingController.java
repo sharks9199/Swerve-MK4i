@@ -26,13 +26,12 @@ public final class HeadingController {
           Constants.Heading.KD,
           new TrapezoidProfile.Constraints(
               Constants.Heading.VELOCIDADE_CORRECAO_MAXIMA_RAD_S,
-              Constants.Heading.ACELERACAO_CORRECAO_MAXIMA_RAD_S2), // Values recommended by Silva.
-          Constants.Swerve.PERIODO_CONTROLE_SEGUNDOS); // 0.02 s
+              Constants.Heading.ACELERACAO_CORRECAO_MAXIMA_RAD_S2),
+          Constants.Swerve.PERIODO_CONTROLE_SEGUNDOS);
 
   private Rotation2d headingAlvo = Rotation2d.kZero;
   private boolean ativo = false;
 
-  // Live-tunable values (mirrors of the dashboard entries).
   private double kP = Constants.Heading.KP;
   private double kI = Constants.Heading.KI;
   private double kD = Constants.Heading.KD;
@@ -42,15 +41,13 @@ public final class HeadingController {
   private double toleranciaPosicaoRad = Constants.Heading.TOLERANCIA_POSICAO_RAD;
   private double toleranciaVelocidadeRadS = Constants.Heading.TOLERANCIA_VELOCIDADE_RAD_S;
 
-  // Last computed values, used for telemetry and "at target" checks.
   private double ultimoOmegaPidRadS = 0.0;
   private double ultimoErroRad = 0.0;
 
   /** Creates the controller and publishes default tuning values to the dashboard. */
   public HeadingController() {
     controller.enableContinuousInput(-Math.PI, Math.PI);
-    // Both arguments are required: the first is the position tolerance, the second the
-    // velocity tolerance.
+
     controller.setTolerance(toleranciaPosicaoRad, toleranciaVelocidadeRadS);
 
     SmartDashboard.setDefaultNumber(DASHBOARD + "kP", kP);
@@ -66,10 +63,6 @@ public final class HeadingController {
     SmartDashboard.setDefaultNumber(
         DASHBOARD + "VelocityToleranceDegPerSec", Units.radiansToDegrees(toleranciaVelocidadeRadS));
   }
-
-  // ---------------------------------------------------------------------------
-  // Goal management
-  // ---------------------------------------------------------------------------
 
   /**
    * Holds the current heading, resetting the profile to the measured state.
@@ -138,10 +131,6 @@ public final class HeadingController {
     ultimoOmegaPidRadS = 0.0;
   }
 
-  // ---------------------------------------------------------------------------
-  // Control output
-  // ---------------------------------------------------------------------------
-
   /**
    * Computes the angular velocity needed to reach the heading goal.
    *
@@ -171,10 +160,6 @@ public final class HeadingController {
         MathUtil.clamp(omega, -velocidadeCorrecaoMaximaRadS, velocidadeCorrecaoMaximaRadS);
     return ultimoOmegaPidRadS;
   }
-
-  // ---------------------------------------------------------------------------
-  // Telemetry and tuning
-  // ---------------------------------------------------------------------------
 
   /**
    * Publishes controller state to the dashboard.
@@ -216,7 +201,7 @@ public final class HeadingController {
    * controller when they have changed.
    */
   private void atualizarTuningDoElastic() {
-    // PID gains
+
     double novoKP =
         MathUtil.clamp(SmartDashboard.getNumber(DASHBOARD + "kP", Constants.Heading.KP), 0.0, 60.0);
     double novoKI =
@@ -231,7 +216,6 @@ public final class HeadingController {
       controller.setPID(kP, kI, kD);
     }
 
-    // Motion profile constraints and tolerances
     double maxCorrecaoDegS =
         MathUtil.clamp(
             SmartDashboard.getNumber(
@@ -276,10 +260,6 @@ public final class HeadingController {
     toleranciaVelocidadeRadS = Units.degreesToRadians(toleranciaVelocidadeDegS);
     controller.setTolerance(toleranciaPosicaoRad, toleranciaVelocidadeRadS);
   }
-
-  // ---------------------------------------------------------------------------
-  // State accessors
-  // ---------------------------------------------------------------------------
 
   /** Returns whether the controller currently holds a heading goal. */
   public boolean estaAtivo() {

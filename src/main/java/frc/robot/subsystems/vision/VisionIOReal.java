@@ -21,7 +21,7 @@ public class VisionIOReal implements VisionIO {
 
   @Override
   public void definirOrientacao(double yawGraus, double yawRateGrausPorSegundo) {
-    // Limelight MegaTag2 input: yaw, yaw rate, pitch, pitch rate, roll, roll rate.
+
     orientation.setDoubleArray(new double[] {yawGraus, yawRateGrausPorSegundo, 0, 0, 0, 0});
   }
 
@@ -31,14 +31,11 @@ public class VisionIOReal implements VisionIO {
     inputs.ty = table.getEntry("ty").getDouble(0.0);
     inputs.temAlvo = table.getEntry("tv").getDouble(0.0) >= 1.0;
 
-    // Robot poses (MegaTag 1 and MegaTag 2), in the blue-alliance WPILib coordinate system.
     double[] mt1 = table.getEntry("botpose_wpiblue").getDoubleArray(new double[0]);
     double[] mt2 = table.getEntry("botpose_orb_wpiblue").getDoubleArray(new double[0]);
     preencherPose(mt1, false, inputs);
     preencherPose(mt2, true, inputs);
 
-    // Raw fiducial data: 7 values per tag
-    // (id, txnc, tync, ta, distToCamera, distToRobot, ambiguity).
     double[] fiducials = table.getEntry("rawfiducials").getDoubleArray(new double[0]);
     inputs.aprilTagID = -1;
     double menorAmbiguidade = 1.0;
@@ -63,7 +60,7 @@ public class VisionIOReal implements VisionIO {
    * @param inputs the inputs object to populate
    */
   private void preencherPose(double[] dados, boolean megaTag2, VisionIOInputs inputs) {
-    // Limelight pose array: x,y,z,roll,pitch,yaw,latency(ms),tagCount,tagSpan,avgDist,avgArea,...
+
     if (dados.length < 11) {
       if (megaTag2) {
         inputs.quantidadeTagsMegaTag2 = 0;
