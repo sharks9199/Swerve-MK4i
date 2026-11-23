@@ -18,7 +18,6 @@ import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.ironmaple.simulation.SimulatedArena;
 import static edu.wpi.first.units.Units.Seconds;
-import frc.robot.util.RobotComponents;
 
    /**
    * Main robot class. Configures logging, owns the {@link RobotContainer} and drives the command

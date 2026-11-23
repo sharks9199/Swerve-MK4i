@@ -40,6 +40,7 @@
     private static final double LATENCY_SECONDS = 0.030;
 
     /** Position noise standard deviation per meter of tag distance (MegaTag 2). */
+    @SuppressWarnings("unused")
     private static final double MT2_XY_NOISE_PER_METER = 0.004;
 
     /** Position noise standard deviation per meter of tag distance (MegaTag 1). */
