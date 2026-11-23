@@ -1,8 +1,10 @@
+
 package frc.robot.sharks.subsystems.vision;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.LimelightHelpers;
 import frc.robot.sharks.Constants;
 import frc.robot.sharks.subsystems.swerve.Drive;
 
@@ -10,8 +12,15 @@ import org.littletonrobotics.junction.Logger;
 
 /** Reads AprilTag poses and fuses validated vision measurements into Drive odometry. */
 public class Vision extends SubsystemBase {
+
   /** Limelight pipeline index configured for AprilTag detection. */
   private static final int PIPELINE_APRILTAG = 0;
+
+  /** Limelight pipeline index configured for Game Piece detection. */
+  private static final int PIPELINE_GAMEPIECE = 1;
+
+  /** Limelight NetworkTables name. */
+  private static final String LIMELIGHT_NAME = "limelight";
 
   /** Minimum number of tags required to accept a measurement. */
   private static final int TAGS_MINIMAS = 1;
@@ -19,6 +28,8 @@ public class Vision extends SubsystemBase {
   private final Drive drive;
   private final VisionIO io;
   private final VisionIOInputsAutoLogged inputs = new VisionIOInputsAutoLogged();
+
+  private boolean trackingGamepiece = false;
 
   /** Timestamp of the last accepted measurement; prevents fusing the same frame twice. */
   private double ultimoTimestampAceito = -1.0;
@@ -42,6 +53,21 @@ public class Vision extends SubsystemBase {
         drive.getHeading().getDegrees(), Math.toDegrees(drive.getYawVelocityRadPerSec()));
     io.updateInputs(inputs);
     Logger.processInputs("Vision/Limelight", inputs);
+
+    // Game Piece tracking telemetry.
+    Logger.recordOutput("Vision/Gamepiece/Tracking", trackingGamepiece);
+    Logger.recordOutput("Vision/Gamepiece/HasTarget", hasTarget());
+    Logger.recordOutput("Vision/Gamepiece/Tx", getTx());
+
+    // Prevents AprilTag pose fusion during Game Piece tracking
+    // or while the camera is switching back to the AprilTag pipeline.
+    if (trackingGamepiece
+        || LimelightHelpers.getCurrentPipelineIndex(LIMELIGHT_NAME)
+            != PIPELINE_APRILTAG) {
+      Logger.recordOutput("Vision/Accepted", false);
+      Logger.recordOutput("Vision/AcceptedSource", "None");
+      return;
+    }
 
     Logger.recordOutput("Vision/AprilTag/Visible", inputs.temAlvo);
     Logger.recordOutput("Vision/AprilTag/ID", inputs.aprilTagID);
@@ -142,5 +168,34 @@ public class Vision extends SubsystemBase {
     }
 
     return !DriverStation.isEStopped();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Game Piece Tracking
+  // ---------------------------------------------------------------------------
+
+  /** Returns the horizontal target offset, in degrees. */
+  public double getTx() {
+    return LimelightHelpers.getTX(LIMELIGHT_NAME);
+  }
+
+  /** Returns whether a valid Game Piece target is detected. */
+  public boolean hasTarget() {
+    return trackingGamepiece
+        && LimelightHelpers.getCurrentPipelineIndex(LIMELIGHT_NAME)
+            == PIPELINE_GAMEPIECE
+        && LimelightHelpers.getTV(LIMELIGHT_NAME);
+  }
+
+  /** Enables Game Piece detection. */
+  public void enableGamepieceTracking() {
+    trackingGamepiece = true;
+    io.definirPipeline(PIPELINE_GAMEPIECE);
+  }
+
+  /** Restores AprilTag detection. */
+  public void disableGamepieceTracking() {
+    trackingGamepiece = false;
+    io.definirPipeline(PIPELINE_APRILTAG);
   }
 }

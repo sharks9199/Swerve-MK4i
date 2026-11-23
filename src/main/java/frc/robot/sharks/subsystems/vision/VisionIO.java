@@ -42,3 +42,6 @@ public interface VisionIO {
    */
   default void definirOrientacao(double yawGraus, double yawRateGrausPorSegundo) {}
 }
+
+
+

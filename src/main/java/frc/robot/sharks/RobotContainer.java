@@ -9,6 +9,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.sharks.commands.swerve.SwerveCommands;
+import frc.robot.sharks.commands.swerve.TrackGamepiece;
 import frc.robot.sharks.simulation.RobotComponents;
 import frc.robot.sharks.subsystems.swerve.Drive;
 import frc.robot.sharks.subsystems.swerve.control.HeadingController;
@@ -18,13 +19,7 @@ import frc.robot.sharks.subsystems.vision.VisionIOReal;
 import frc.robot.sharks.subsystems.vision.VisionIOSim;
 
 /**
- * Composicao do robo Sharks: cria subsistemas, conecta comandos e associa controles.
- *
- * <p>Evite implementar controladores de motores aqui. Toda logica de atuacao
- * pertence aos subsistemas; esta classe configura apenas a integracao.
- *
- * <p>As poses de elevador e intake publicadas por {@code RobotComponents}
- * sao APENAS visuais. Nao existe elevador real implementado nesta base.
+ * <p>As poses de elevador e intake publicadas por {@code RobotComponents} 
  */
 public class RobotContainer {
 
@@ -40,6 +35,8 @@ public class RobotContainer {
             case REPLAY -> new VisionIO() {};
         }
     );
+
+    private final TrackGamepiece trackgamepiece = new TrackGamepiece(swerve, vision);
 
     private final XboxController driverController =
         new XboxController(Constants.Controles.PORTA_DRIVER);
