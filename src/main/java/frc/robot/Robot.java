@@ -10,8 +10,8 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.sharks9199.Constants;
-import frc.robot.sharks9199.RobotContainer;
+import frc.robot.sharks.Constants;
+import frc.robot.sharks.RobotContainer;
 
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.Logger;
@@ -49,9 +49,8 @@ import static edu.wpi.first.units.Units.Seconds;
       } else {
 
         Logger.addDataReceiver(new NT4Publisher());
-        if (isSimulation()) {
-          Logger.addDataReceiver(new WPILOGWriter());
-        }
+        // REAL: /U/logs em pendrive FAT32 no roboRIO; SIM: pasta logs local.
+        Logger.addDataReceiver(new WPILOGWriter());
       }
       Logger.start();
 
