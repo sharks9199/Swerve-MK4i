@@ -4,6 +4,9 @@
 
 package frc.robot;
 
+import frc.robot.sharks.Constants;
+import frc.robot.sharks.RobotContainer;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
@@ -74,9 +77,8 @@ import static edu.wpi.first.units.Units.Seconds;
 
     @Override
     public void simulationPeriodic() {
-        SimulatedArena.getInstance().simulationPeriodic();
-
         SimulatedArena.overrideSimulationTimings(Seconds.of(0.01), 3);
+        SimulatedArena.getInstance().simulationPeriodic();
     }
 
     @Override

@@ -7,7 +7,7 @@ import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import edu.wpi.first.units.measure.LinearVelocity;
-import frc.robot.Constants;
+import frc.robot.sharks.Constants;
 
 /**
  * Exposes the swerve configuration required by Phoenix Tuner X and the module IO layer.
