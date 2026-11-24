@@ -11,6 +11,8 @@ public interface VisionIO {
   class VisionIOInputs {
 
     public boolean temAlvo = false;
+    public boolean temAlvoGamepiece = false;
+    public int pipelineAtual = 0; // Compatibilidade com logs antigos; REAL informa -1 se desconhecido.
     public int aprilTagID = -1;
     public double tx = 0.0;
     public double ty = 0.0;

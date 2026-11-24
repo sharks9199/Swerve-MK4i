@@ -24,6 +24,7 @@ public final class VisionTimestampUtil {
     }
     double capturedAt = publishedAt - latencyMs / 1000.0;
     return capturedAt > 0.0 && capturedAt <= nowSeconds + 0.10
+        && nowSeconds - capturedAt <= maxAgeSeconds
         ? capturedAt : 0.0;
   }
 }

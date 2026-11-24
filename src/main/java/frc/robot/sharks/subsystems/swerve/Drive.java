@@ -46,6 +46,7 @@ import frc.robot.sharks.subsystems.swerve.module.ModuleIO;
 import frc.robot.sharks.subsystems.swerve.module.ModuleIOReal;
 import frc.robot.sharks.subsystems.swerve.module.ModuleIOSim;
 
+import java.util.Optional;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -111,6 +112,8 @@ public class Drive extends SubsystemBase {
   private final SimGroundTruth simulatedGroundTruth = new SimGroundTruth();
   private double lastSimulationTimestamp = Double.NaN;
   private boolean criticalSensorFault = false;
+  private double lastOdometryTimestamp = Double.NEGATIVE_INFINITY;
+  private double firstOdometryTimestamp = Double.POSITIVE_INFINITY;
 
 
   /**
@@ -368,7 +371,23 @@ public class Drive extends SubsystemBase {
             && gyroInputs.odometryYawPositions.length >= sampleCount
             && gyroInputs.odometryYawTimestamps.length >= sampleCount;
 
+    int rejectedSamples = 0;
     for (int amostra = 0; amostra < sampleCount; amostra++) {
+      double timestamp = timestamps[amostra];
+      boolean valid = Double.isFinite(timestamp) && timestamp > lastOdometryTimestamp;
+      for (int modulo = 0; modulo < modules.length && valid; modulo++) {
+        SwerveModulePosition pos = modules[modulo].getOdometryPositions()[amostra];
+        double moduleTimestamp = modules[modulo].getOdometryTimestamps()[amostra];
+        valid = pos != null && pos.angle != null && Double.isFinite(pos.distanceMeters)
+            && Double.isFinite(pos.angle.getRadians()) && Double.isFinite(moduleTimestamp)
+            // SIM gera os timestamps dos módulos sequencialmente no mesmo loop.
+            && (Constants.MODO_ATUAL != Constants.Mode.REAL
+                || Math.abs(moduleTimestamp - timestamp) <= 1e-6);
+      }
+      if (!valid) {
+        rejectedSamples++;
+        continue;
+      }
       SwerveModulePosition[] posicoes = new SwerveModulePosition[modules.length];
       SwerveModulePosition[] deltas = new SwerveModulePosition[modules.length];
 
@@ -380,7 +399,11 @@ public class Drive extends SubsystemBase {
                 posicoes[modulo].angle);
       }
 
-      if (gyroSamplesAvailable) {
+      if (gyroSamplesAvailable
+          && Double.isFinite(gyroInputs.odometryYawTimestamps[amostra])
+          && Math.abs(gyroInputs.odometryYawTimestamps[amostra] - timestamp) <= 1e-6
+          && gyroInputs.odometryYawPositions[amostra] != null
+          && Double.isFinite(gyroInputs.odometryYawPositions[amostra].getRadians())) {
         rawGyroRotation = gyroInputs.odometryYawPositions[amostra].plus(hardwareGyroOffset);
       } else {
 
@@ -388,7 +411,9 @@ public class Drive extends SubsystemBase {
         rawGyroRotation = rawGyroRotation.plus(new Rotation2d(twist.dtheta));
       }
 
-      poseEstimator.updateWithTime(timestamps[amostra], rawGyroRotation, posicoes);
+      poseEstimator.updateWithTime(timestamp, rawGyroRotation, posicoes);
+      firstOdometryTimestamp = Math.min(firstOdometryTimestamp, timestamp);
+      lastOdometryTimestamp = timestamp;
 
       for (int modulo = 0; modulo < modules.length; modulo++) {
         lastModulePositions[modulo] = posicoes[modulo];
@@ -396,6 +421,13 @@ public class Drive extends SubsystemBase {
     }
 
     Logger.recordOutput("Odometry/SampleCount", sampleCount);
+    Logger.recordOutput("Odometry/RejectedSamples", rejectedSamples);
+    if (Constants.MODO_ATUAL == Constants.Mode.REAL) {
+      Logger.recordOutput("Odometry/DroppedQueueBatches",
+          SwerveOdometry.getInstance().getDroppedQueueBatches());
+      Logger.recordOutput("Odometry/FailedSignalRefreshes",
+          SwerveOdometry.getInstance().getFailedSignalRefreshes());
+    }
     Logger.recordOutput("Odometry/GyroSamplesAvailable", gyroSamplesAvailable);
   }
 
@@ -493,7 +525,7 @@ public class Drive extends SubsystemBase {
 
   /** Velocidade maxima do modo atual (m/s). */
   public double getVelocidadeMaximaAtual() {
-    double velocidadeConfigurada = modoLentoAtivo
+    double velocidadeConfigurada = modoLentoAtivo && !DriverStation.isAutonomousEnabled()
         ? Constants.Swerve.VELOCIDADE_MAXIMA_MPS_LENTO
         : Constants.Swerve.VELOCIDADE_MAXIMA_MPS_RAPIDO;
     return Math.min(velocidadeConfigurada, Constants.Swerve.VELOCIDADE_MAXIMA_FISICA_ESTIMADA_MPS);
@@ -501,14 +533,14 @@ public class Drive extends SubsystemBase {
 
   /** Velocidade angular maxima do modo atual (rad/s). */
   public double getVelocidadeAngularMaximaAtual() {
-    return modoLentoAtivo
+    return modoLentoAtivo && !DriverStation.isAutonomousEnabled()
         ? Constants.Swerve.VELOCIDADE_ANGULAR_MAXIMA_RAD_S_LENTO
         : Constants.Swerve.VELOCIDADE_ANGULAR_MAXIMA_RAD_S_RAPIDO;
   }
 
   /** Aceleracao maxima do modo atual (m/s^2). */
   public double getAceleracaoMaximaAtual() {
-    return modoLentoAtivo
+    return modoLentoAtivo && !DriverStation.isAutonomousEnabled()
         ? Constants.Swerve.ACELERACAO_MAXIMA_MPS2_LENTO
         : Constants.Swerve.ACELERACAO_MAXIMA_MPS2_RAPIDO;
   }
@@ -520,6 +552,7 @@ public class Drive extends SubsystemBase {
    */
   public void setPose(Pose2d pose) {
     poseEstimator.resetPosition(rawGyroRotation, lastModulePositions, pose);
+    firstOdometryTimestamp = Double.POSITIVE_INFINITY;
     if (Constants.MODO_ATUAL == Constants.Mode.SIM) {
       simulatedGroundTruth.reset(pose);
       lastSimulationTimestamp = Double.NaN;
@@ -541,6 +574,7 @@ public class Drive extends SubsystemBase {
    */
   public void zerarOrientacaO() {
     poseEstimator.resetRotation(isRedAlliance() ? Rotation2d.k180deg : Rotation2d.kZero);
+    firstOdometryTimestamp = Double.POSITIVE_INFINITY;
   }
 
   /** Returns whether the robot is on the red alliance (blue when unknown). */
@@ -588,6 +622,15 @@ public class Drive extends SubsystemBase {
     return correcaoHeading;
   }
 
+  /** Returns the estimated pose at the vision frame's capture time. */
+  public Optional<Pose2d> getPoseAtTimestamp(double timestampSeconds) {
+    if (!Double.isFinite(timestampSeconds) || timestampSeconds < firstOdometryTimestamp
+        || timestampSeconds > lastOdometryTimestamp || lastOdometryTimestamp - timestampSeconds > 0.50) {
+      return Optional.empty();
+    }
+    return poseEstimator.sampleAt(timestampSeconds);
+  }
+
   /** Returns the estimated robot pose on the field. */
   @AutoLogOutput(key = "Odometry/Robot")
   public Pose2d getPose() {
@@ -616,7 +659,8 @@ public class Drive extends SubsystemBase {
 
   /** Returns the yaw rate measured by the gyro, in rad/s. */
   public double getYawVelocityRadPerSec() {
-    return gyroInputs.yawVelocityRadPerSec;
+    return gyroInputs.connected ? gyroInputs.yawVelocityRadPerSec
+        : getChassisSpeeds().omegaRadiansPerSecond;
   }
 
   /** Returns the measured robot-relative chassis speeds. */

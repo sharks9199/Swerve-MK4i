@@ -26,7 +26,6 @@ public class RobotContainer {
     private final Drive swerve = Drive.criarSwerve();
     private final HeadingController headingController = new HeadingController();
 
-    @SuppressWarnings("unused")
     private final Vision vision = new Vision(
         swerve,
         switch (Constants.MODO_ATUAL) {
@@ -72,14 +71,17 @@ public class RobotContainer {
      * L1 (down), L2 (left), L3 (right), or L4 (up) during enabled teleop.
      */
     public void configureButtons() {
-        new Trigger(driverController::getStartButton)
+        new Trigger(() -> DriverStation.isTeleopEnabled() && driverController.getStartButton())
             .onTrue(Commands.runOnce(this::zerarGuinada));
 
-        new Trigger(driverController::getAButton)
+        new Trigger(() -> DriverStation.isTeleopEnabled() && driverController.getAButton())
             .onTrue(Commands.runOnce(swerve::alternarModoLento));
 
-        new Trigger(driverController::getRightBumperButton)
-            .onTrue(Commands.runOnce(trackgamepiece::execute)); //verificar qual o método correto para utilizar.
+        // No SIM, o Right Bumper continua reservado ao elevador visual.
+        new Trigger(() -> DriverStation.isTeleopEnabled()
+                && Constants.MODO_ATUAL != Constants.Mode.SIM
+                && driverController.getRightBumperButton())
+            .whileTrue(trackgamepiece);
 
         // Elevator presets are only available while teleoperated control is enabled.
         Trigger teleop = new Trigger(() ->

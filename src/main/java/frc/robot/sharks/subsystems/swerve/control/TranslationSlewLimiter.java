@@ -20,6 +20,10 @@ public final class TranslationSlewLimiter {
    * @param periodSeconds time between calls to {@link #calculate}, in seconds
    */
   public TranslationSlewLimiter(double maxAccelerationMps2, double periodSeconds) {
+    if (!Double.isFinite(maxAccelerationMps2) || !Double.isFinite(periodSeconds)
+        || periodSeconds <= 0.0) {
+      throw new IllegalArgumentException("Aceleracao e periodo devem ser finitos; periodo positivo");
+    }
     this.maxAccelerationMps2 = Math.abs(maxAccelerationMps2);
     this.periodSeconds = periodSeconds;
   }
@@ -36,10 +40,18 @@ public final class TranslationSlewLimiter {
 
   /** Applies the acceleration limit of the currently selected gear. */
   public Translation2d calculate(Translation2d target, double accelerationMps2) {
+    if (!isFinite(target) || !Double.isFinite(accelerationMps2)) {
+      current = Translation2d.kZero;
+      return current;
+    }
     Translation2d delta = target.minus(current);
     double distance = delta.getNorm();
     double maxStep = Math.abs(accelerationMps2) * periodSeconds;
 
+    if (!Double.isFinite(distance) || !Double.isFinite(maxStep)) {
+      current = Translation2d.kZero;
+      return current;
+    }
     if (distance <= maxStep) {
       current = target;
     } else {
@@ -54,6 +66,10 @@ public final class TranslationSlewLimiter {
    * @param value the new current velocity vector, in m/s
    */
   public void reset(Translation2d value) {
-    current = value;
+    current = isFinite(value) ? value : Translation2d.kZero;
+  }
+
+  private static boolean isFinite(Translation2d value) {
+    return value != null && Double.isFinite(value.getX()) && Double.isFinite(value.getY());
   }
 }

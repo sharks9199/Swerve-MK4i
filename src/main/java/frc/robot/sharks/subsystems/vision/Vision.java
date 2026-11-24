@@ -4,7 +4,6 @@ package frc.robot.sharks.subsystems.vision;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.LimelightHelpers;
 import frc.robot.sharks.Constants;
 import frc.robot.sharks.subsystems.swerve.Drive;
 
@@ -18,9 +17,6 @@ public class Vision extends SubsystemBase {
 
   /** Limelight pipeline index configured for Game Piece detection. */
   private static final int PIPELINE_GAMEPIECE = 1;
-
-  /** Limelight NetworkTables name. */
-  private static final String LIMELIGHT_NAME = "limelight";
 
   /** Minimum number of tags required to accept a measurement. */
   private static final int TAGS_MINIMAS = 1;
@@ -62,8 +58,7 @@ public class Vision extends SubsystemBase {
     // Prevents AprilTag pose fusion during Game Piece tracking
     // or while the camera is switching back to the AprilTag pipeline.
     if (trackingGamepiece
-        || LimelightHelpers.getCurrentPipelineIndex(LIMELIGHT_NAME)
-            != PIPELINE_APRILTAG) {
+        || inputs.pipelineAtual != PIPELINE_APRILTAG) {
       Logger.recordOutput("Vision/Accepted", false);
       Logger.recordOutput("Vision/AcceptedSource", "None");
       return;
@@ -112,7 +107,10 @@ public class Vision extends SubsystemBase {
       double sigmaTheta =
           tags >= 2
               ? Constants.Vision.MT1_DESVIO_THETA_MULTIPLAS_TAGS_RAD
-              : Constants.Vision.MT1_DESVIO_THETA_TAG_UNICA_RAD;
+              : inputs.distanciaMediaTagsMegaTag1
+                      <= Constants.Vision.DISTANCIA_MAXIMA_TAG_UNICA_HEADING_METROS
+                  ? Constants.Vision.MT1_DESVIO_THETA_TAG_UNICA_RAD
+                  : Constants.Vision.MT2_DESVIO_THETA_RAD;
       drive.adicionarMedicaoVisao(
           inputs.poseMegaTag1, inputs.timestampMegaTag1, sigmaXY, sigmaXY, sigmaTheta);
       ultimoTimestampAceito = inputs.timestampMegaTag1;
@@ -140,6 +138,7 @@ public class Vision extends SubsystemBase {
         || !Double.isFinite(timestamp)
         || timestamp <= 0.0
         || timestamp <= ultimoTimestampAceito
+        || pose == null
         || !Double.isFinite(pose.getX())
         || !Double.isFinite(pose.getY())
         || !Double.isFinite(pose.getRotation().getRadians())
@@ -150,12 +149,17 @@ public class Vision extends SubsystemBase {
       return false;
     }
 
-    if (Math.abs(drive.getYawVelocityRadPerSec())
+    double yawRate = drive.getYawVelocityRadPerSec();
+    if (!Double.isFinite(yawRate) || Math.abs(yawRate)
         > Constants.Vision.VELOCIDADE_ANGULAR_MAXIMA_PARA_VISAO_RAD_S) {
       return false;
     }
 
-    double erro = pose.getTranslation().getDistance(drive.getPose().getTranslation());
+    var poseNoInstante = drive.getPoseAtTimestamp(timestamp);
+    if (poseNoInstante.isEmpty()) {
+      return false;
+    }
+    double erro = pose.getTranslation().getDistance(poseNoInstante.get().getTranslation());
     double tolerancia = Math.max(1.0, distancia * (tags >= 2 ? 1.5 : 1.0));
     if (erro > tolerancia) {
       return false;
@@ -176,15 +180,14 @@ public class Vision extends SubsystemBase {
 
   /** Returns the horizontal target offset, in degrees. */
   public double getTx() {
-    return LimelightHelpers.getTX(LIMELIGHT_NAME);
+    return inputs.tx;
   }
 
   /** Returns whether a valid Game Piece target is detected. */
   public boolean hasTarget() {
     return trackingGamepiece
-        && LimelightHelpers.getCurrentPipelineIndex(LIMELIGHT_NAME)
-            == PIPELINE_GAMEPIECE
-        && LimelightHelpers.getTV(LIMELIGHT_NAME);
+        && inputs.pipelineAtual == PIPELINE_GAMEPIECE
+        && inputs.temAlvoGamepiece;
   }
 
   /** Enables Game Piece detection. */

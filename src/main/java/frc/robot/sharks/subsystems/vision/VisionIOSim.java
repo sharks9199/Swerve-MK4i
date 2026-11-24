@@ -9,6 +9,8 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.Timer;
 import frc.robot.sharks.Constants;
 
+import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.Random;
 import java.util.function.Supplier;
 
@@ -57,9 +59,12 @@ public class VisionIOSim implements VisionIO {
   private final Supplier<Pose2d> truePoseSupplier;
   private final Random random = new Random(0);
 
-  private double lastFrameTime = -1.0;
+  private record Frame(double timestamp, Pose2d pose) {}
+  private final Queue<Frame> pendingFrames = new ArrayDeque<>();
+  private double nextFrameTime = -1.0;
+  private double lastUpdateTime = -1.0;
+  private boolean pipelineChanged = true;
 
-  @SuppressWarnings("unused")
   private int pipeline = 0;
   @SuppressWarnings("unused")
   private double robotYawDeg = 0.0;
@@ -78,7 +83,10 @@ public class VisionIOSim implements VisionIO {
 
   @Override
   public void definirPipeline(int pipeline) {
-    this.pipeline = pipeline;
+    if (this.pipeline != pipeline) {
+      this.pipeline = pipeline;
+      pipelineChanged = true;
+    }
   }
 
   @Override
@@ -91,12 +99,37 @@ public class VisionIOSim implements VisionIO {
   public void updateInputs(VisionIOInputs inputs) {
     double now = Timer.getFPGATimestamp();
 
-    if (lastFrameTime >= 0.0 && now - lastFrameTime < 1.0 / FRAME_RATE_HZ) {
-      return;
+    if (pipelineChanged || now < lastUpdateTime) {
+      pendingFrames.clear();
+      nextFrameTime = now;
+      inputs.temAlvo = false;
+      inputs.aprilTagID = -1;
+      inputs.tx = 0.0;
+      inputs.ty = 0.0;
+      limparMedicoes(inputs);
+      pipelineChanged = false;
     }
-    lastFrameTime = now;
+    lastUpdateTime = now;
+    inputs.pipelineAtual = pipeline;
+    // Ainda não há modelo de detecção de peças na simulação.
+    inputs.temAlvoGamepiece = false;
+    if (pipeline != 0) return;
 
-    Pose2d robotPose = truePoseSupplier.get();
+    // Captura a pose agora e entrega o frame apenas após a latência simulada.
+    // Mantém a cadência média sem inventar capturas entre ciclos do robô.
+    if (now + 1e-9 >= nextFrameTime) {
+      pendingFrames.add(new Frame(now, truePoseSupplier.get()));
+      nextFrameTime += (Math.floor(Math.max(0.0, now - nextFrameTime) * FRAME_RATE_HZ) + 1)
+          / FRAME_RATE_HZ;
+    }
+    Frame frame = null;
+    while (!pendingFrames.isEmpty()
+        && now - pendingFrames.peek().timestamp() >= LATENCY_SECONDS) {
+      frame = pendingFrames.remove();
+    }
+    if (frame == null) return;
+
+    Pose2d robotPose = frame.pose();
     Pose2d cameraPose = robotPose.transformBy(ROBOT_TO_CAMERA);
 
     int visibleCount = 0;
@@ -138,16 +171,13 @@ public class VisionIOSim implements VisionIO {
     inputs.ty = 0.0;
 
     if (visibleCount == 0) {
-      inputs.quantidadeTagsMegaTag1 = 0;
-      inputs.quantidadeTagsMegaTag2 = 0;
-      inputs.distanciaMediaTagsMegaTag1 = 0.0;
-      inputs.distanciaMediaTagsMegaTag2 = 0.0;
+      limparMedicoes(inputs);
       return;
     }
 
     double averageDistance = distanceSum / visibleCount;
     double ambiguity = visibleCount >= 2 ? 0.0 : SINGLE_TAG_AMBIGUITY;
-    double timestamp = now - LATENCY_SECONDS;
+    double timestamp = frame.timestamp();
 
     double mt2Noise = MT2_XY_NOISE_PER_METER * averageDistance;
     inputs.poseMegaTag2 =
@@ -172,6 +202,17 @@ public class VisionIOSim implements VisionIO {
     inputs.quantidadeTagsMegaTag1 = visibleCount;
     inputs.distanciaMediaTagsMegaTag1 = averageDistance;
     inputs.ambiguidadeMinimaMegaTag1 = ambiguity;
+  }
+
+  private void limparMedicoes(VisionIOInputs inputs) {
+    inputs.quantidadeTagsMegaTag1 = 0;
+    inputs.quantidadeTagsMegaTag2 = 0;
+    inputs.distanciaMediaTagsMegaTag1 = 0.0;
+    inputs.distanciaMediaTagsMegaTag2 = 0.0;
+    inputs.timestampMegaTag1 = 0.0;
+    inputs.timestampMegaTag2 = 0.0;
+    inputs.ambiguidadeMinimaMegaTag1 = 1.0;
+    inputs.ambiguidadeMinimaMegaTag2 = 1.0;
   }
 }
 

@@ -47,6 +47,11 @@ public final class SwerveOdometry extends Thread {
   private final List<Queue<Double>> timestampQueues = new ArrayList<>();
 
   private volatile boolean running = true;
+  private volatile long droppedQueueBatches = 0;
+  private volatile long failedSignalRefreshes = 0;
+
+  public long getDroppedQueueBatches() { return droppedQueueBatches; }
+  public long getFailedSignalRefreshes() { return failedSignalRefreshes; }
 
   private SwerveOdometry() {
     super("PhoenixOdometryThread");
@@ -167,13 +172,17 @@ public final class SwerveOdometry extends Thread {
       try {
         if (IS_CAN_FD && phoenixSignals.length > 0) {
 
-          BaseStatusSignal.waitForAll(LOOP_PERIOD_SECONDS, phoenixSignals);
+          if (!BaseStatusSignal.waitForAll(LOOP_PERIOD_SECONDS, phoenixSignals).isOK()) {
+            failedSignalRefreshes++;
+          }
         } else {
 
           Thread.sleep((long) (LOOP_PERIOD_SECONDS * 1000.0));
 
           if (phoenixSignals.length > 0) {
-            BaseStatusSignal.refreshAll(phoenixSignals);
+            if (!BaseStatusSignal.refreshAll(phoenixSignals).isOK()) {
+              failedSignalRefreshes++;
+            }
           }
         }
 
@@ -198,20 +207,34 @@ public final class SwerveOdometry extends Thread {
    * their queues. Must be called while holding {@link Drive#odometryLock}.
    */
   private void publishSamples() {
+    // Descarta o lote inteiro se alguma fila estiver cheia para preservar o alinhamento.
+    if (phoenixQueues.stream().anyMatch(queue -> queue.size() >= QUEUE_CAPACITY)
+        || genericQueues.stream().anyMatch(queue -> queue.size() >= QUEUE_CAPACITY)
+        || timestampQueues.stream().anyMatch(queue -> queue.size() >= QUEUE_CAPACITY)) {
+      droppedQueueBatches++;
+      return;
+    }
     double timestamp = RobotController.getFPGATime() / 1_000_000.0;
 
     if (phoenixSignals.length > 0) {
       double totalLatency = 0.0;
 
+      int validSignals = 0;
       for (BaseStatusSignal signal : phoenixSignals) {
-        totalLatency += signal.getTimestamp().getLatency();
+        double latency = signal.getTimestamp().getLatency();
+        if (signal.getStatus().isOK() && Double.isFinite(latency) && latency >= 0.0) {
+          totalLatency += latency;
+          validSignals++;
+        }
       }
-
-      timestamp -= totalLatency / phoenixSignals.length;
+      if (validSignals == 0) return;
+      timestamp -= totalLatency / validSignals;
     }
 
     for (int i = 0; i < phoenixSignals.length; i++) {
-      phoenixQueues.get(i).offer(phoenixSignals[i].getValueAsDouble());
+      // Preserva o índice de cada sinal. Drive rejeita módulo inválido ou usa fallback do gyro.
+      BaseStatusSignal signal = phoenixSignals[i];
+      phoenixQueues.get(i).offer(signal.getStatus().isOK() ? signal.getValueAsDouble() : Double.NaN);
     }
 
     for (int i = 0; i < genericSignals.size(); i++) {
