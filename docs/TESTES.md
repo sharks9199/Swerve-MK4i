@@ -1,0 +1,1 @@
+Testando mudança automática de Branch pelo Terminal.
