@@ -9,6 +9,7 @@ import frc.robot.sharks.subsystems.swerve.control.ChassisSpeedLimiter;
 
 
 /** Testes isolados da matematica de limitacao, sem HAL nem simulacao. */
+@SuppressWarnings("unused")
 class ChassisSpeedLimiterTest {
   @Test
   void diagonalRespeitaNorma() {

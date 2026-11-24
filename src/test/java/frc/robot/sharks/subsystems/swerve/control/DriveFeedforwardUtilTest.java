@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import frc.robot.sharks.subsystems.swerve.control.DriveFeedforwardUtil;
 
+@SuppressWarnings("unused")
 class DriveFeedforwardUtilTest {
   @Test void disabledByDefault() {
     assertArrayEquals(new double[4], DriveFeedforwardUtil.calcularVolts(

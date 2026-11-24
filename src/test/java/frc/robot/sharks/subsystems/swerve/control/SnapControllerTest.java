@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import frc.robot.sharks.subsystems.swerve.control.SnapController;
 
+@SuppressWarnings("unused")
 class SnapControllerTest {
   @Test void snapsToLongitudinalAxisWithHysteresis() {
     var snap = new SnapController();

@@ -8,6 +8,7 @@ import frc.robot.sharks.subsystems.swerve.SimGroundTruth;
 
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("unused")
 class SimGroundTruthTest {
   @Test void integratesWithoutReadingPoseEstimator() {
     SimGroundTruth groundTruth = new SimGroundTruth();

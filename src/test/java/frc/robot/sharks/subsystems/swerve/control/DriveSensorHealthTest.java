@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import frc.robot.sharks.subsystems.swerve.control.DriveSensorHealth;
 
+@SuppressWarnings("unused")
 class DriveSensorHealthTest {
   @Test void blocksFaultyModuleAndGyro() {
     assertFalse(DriveSensorHealth.criticalFault(true, new boolean[]{true,true,true,true}));

@@ -6,6 +6,7 @@ import frc.robot.sharks.subsystems.swerve.control.TranslationSlewLimiter;
 
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("unused")
 class TranslationSlewLimiterTest {
   @Test void limitsVectorMagnitudeNotAxesSeparately() {
     var limiter = new TranslationSlewLimiter(2.0, 0.02);

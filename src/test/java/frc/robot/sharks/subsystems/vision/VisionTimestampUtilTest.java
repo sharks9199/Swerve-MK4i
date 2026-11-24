@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import frc.robot.sharks.subsystems.vision.VisionTimestampUtil;
 
+@SuppressWarnings("unused")
 class VisionTimestampUtilTest {
   @Test void freshFrameKeepsOriginalTimestampAcrossLoops() {
     long updated = 2_000_000L;
