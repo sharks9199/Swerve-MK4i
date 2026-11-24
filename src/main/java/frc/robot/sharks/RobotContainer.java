@@ -78,6 +78,9 @@ public class RobotContainer {
         new Trigger(driverController::getAButton)
             .onTrue(Commands.runOnce(swerve::alternarModoLento));
 
+        new Trigger(driverController::getRightBumperButton)
+            .onTrue(Commands.runOnce(trackgamepiece::execute)); //verificar qual o método correto para utilizar.
+
         // Elevator presets are only available while teleoperated control is enabled.
         Trigger teleop = new Trigger(() ->
             DriverStation.isTeleopEnabled() && Constants.MODO_ATUAL == Constants.Mode.SIM);

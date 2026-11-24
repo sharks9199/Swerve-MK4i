@@ -29,7 +29,7 @@ public final class HeadingController {
               Constants.Heading.ACELERACAO_CORRECAO_MAXIMA_RAD_S2),
           Constants.Swerve.PERIODO_CONTROLE_SEGUNDOS);
 
-  private Rotation2d headingAlvo = Rotation2d.kZero;
+  private Rotation2d headingAlvo = Rotation2d.kZero;  
   private boolean ativo = false;
 
   private double kP = Constants.Heading.KP;
