@@ -1,0 +1,757 @@
+{
+  "version": 1.0,
+  "grid_size": 128,
+  "tabs": [
+    {
+      "name": "Teleoperado",
+      "grid_layout": {
+        "layouts": [],
+        "containers": [
+          {
+            "title": "Tempo de partida",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Match Time",
+            "properties": {
+              "topic": "/SmartDashboard/Sharks/TempoPartida",
+              "period": 0.1,
+              "data_type": "double",
+              "time_display_mode": "Minutes and Seconds",
+              "red_start_time": 15,
+              "yellow_start_time": 30
+            }
+          },
+          {
+            "title": "Bateria (V)",
+            "x": 256.0,
+            "y": 0.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Voltage View",
+            "properties": {
+              "topic": "/SmartDashboard/Sharks/BateriaVolts",
+              "period": 0.1,
+              "data_type": "double",
+              "min_value": 6.0,
+              "max_value": 13.0,
+              "divisions": 7
+            }
+          },
+          {
+            "title": "Modo do robô",
+            "x": 512.0,
+            "y": 0.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Sharks/Modo",
+              "period": 0.1,
+              "data_type": "string"
+            }
+          },
+          {
+            "title": "Falha crítica | Drive",
+            "x": 768.0,
+            "y": 0.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Drive/CriticalSensorFault",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4292559180,
+              "false_color": 4280459371,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Modo lento",
+            "x": 1024.0,
+            "y": 0.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Drive/ModoLentoAtivo",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4293304892,
+              "false_color": 4283457136,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "SHARKS 9199 | FIELD",
+            "x": 0.0,
+            "y": 128.0,
+            "width": 768.0,
+            "height": 384.0,
+            "type": "Field",
+            "properties": {
+              "topic": "/SmartDashboard/Arena",
+              "period": 0.06,
+              "field_game": "Rebuilt",
+              "robot_width": 0.86,
+              "robot_length": 0.86,
+              "show_other_objects": true,
+              "show_trajectories": true,
+              "field_rotation": 0.0,
+              "robot_color": 4278236632,
+              "trajectory_color": 4294362195,
+              "show_robot_outside_widget": true
+            }
+          },
+          {
+            "title": "Velocidade medida (m/s)",
+            "x": 768.0,
+            "y": 128.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Sharks/VelocidadeRealMps",
+              "period": 0.1,
+              "data_type": "double"
+            }
+          },
+          {
+            "title": "Limite linear (m/s)",
+            "x": 1024.0,
+            "y": 128.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Drive/LimiteLinearMps",
+              "period": 0.1,
+              "data_type": "double"
+            }
+          },
+          {
+            "title": "Heading (°)",
+            "x": 768.0,
+            "y": 256.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Sharks/HeadingGraus",
+              "period": 0.1,
+              "data_type": "double"
+            }
+          },
+          {
+            "title": "Heading ativo",
+            "x": 1024.0,
+            "y": 256.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/HeadingTuning/Active",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4280459371,
+              "false_color": 4283457136,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Rastreando peça",
+            "x": 768.0,
+            "y": 384.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Vision/Gamepiece/Tracking",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4280459371,
+              "false_color": 4283457136,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Alvo de peça detectado",
+            "x": 1024.0,
+            "y": 384.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Vision/Gamepiece/HasTarget",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4280459371,
+              "false_color": 4283457136,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Correção visual neste ciclo",
+            "x": 0.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Vision/Accepted",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4280459371,
+              "false_color": 4283457136,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Fonte da correção",
+            "x": 256.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Vision/AcceptedSource",
+              "period": 0.1,
+              "data_type": "string"
+            }
+          },
+          {
+            "title": "TX peça (°)",
+            "x": 512.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Vision/Gamepiece/Tx",
+              "period": 0.1,
+              "data_type": "double"
+            }
+          },
+          {
+            "title": "Preset elevador (SIM)",
+            "x": 768.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/RobotState/Elevador/Preset",
+              "period": 0.1,
+              "data_type": "string"
+            }
+          },
+          {
+            "title": "Preset intake (SIM)",
+            "x": 1024.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/RobotState/Intake/Preset",
+              "period": 0.1,
+              "data_type": "string"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Autônomo",
+      "grid_layout": {
+        "layouts": [],
+        "containers": [
+          {
+            "title": "Escolher autônomo",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 512.0,
+            "height": 128.0,
+            "type": "ComboBox Chooser",
+            "properties": {
+              "topic": "/SmartDashboard/Autonomo/Seletor",
+              "period": 0.1,
+              "sort_options": false
+            }
+          },
+          {
+            "title": "Tempo de partida",
+            "x": 512.0,
+            "y": 0.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Match Time",
+            "properties": {
+              "topic": "/SmartDashboard/Sharks/TempoPartida",
+              "period": 0.1,
+              "data_type": "double",
+              "time_display_mode": "Seconds Only",
+              "red_start_time": 3,
+              "yellow_start_time": 5
+            }
+          },
+          {
+            "title": "Bateria (V)",
+            "x": 768.0,
+            "y": 0.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Voltage View",
+            "properties": {
+              "topic": "/SmartDashboard/Sharks/BateriaVolts",
+              "period": 0.1,
+              "data_type": "double",
+              "min_value": 6.0,
+              "max_value": 13.0,
+              "divisions": 7
+            }
+          },
+          {
+            "title": "Auto em execução",
+            "x": 1024.0,
+            "y": 0.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Sharks/AutoEmExecucao",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4280459371,
+              "false_color": 4283457136,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "SHARKS 9199 | FIELD",
+            "x": 0.0,
+            "y": 128.0,
+            "width": 768.0,
+            "height": 384.0,
+            "type": "Field",
+            "properties": {
+              "topic": "/SmartDashboard/Arena",
+              "period": 0.06,
+              "field_game": "Rebuilt",
+              "robot_width": 0.86,
+              "robot_length": 0.86,
+              "show_other_objects": true,
+              "show_trajectories": true,
+              "field_rotation": 0.0,
+              "robot_color": 4278236632,
+              "trajectory_color": 4294362195,
+              "show_robot_outside_widget": true
+            }
+          },
+          {
+            "title": "Velocidade medida (m/s)",
+            "x": 768.0,
+            "y": 128.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Sharks/VelocidadeRealMps",
+              "period": 0.1,
+              "data_type": "double"
+            }
+          },
+          {
+            "title": "Falha crítica | Drive",
+            "x": 1024.0,
+            "y": 128.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Drive/CriticalSensorFault",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4292559180,
+              "false_color": 4280459371,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Heading alvo (°)",
+            "x": 768.0,
+            "y": 256.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/HeadingTuning/TargetHeadingDeg",
+              "period": 0.1,
+              "data_type": "double"
+            }
+          },
+          {
+            "title": "Erro de heading (°)",
+            "x": 1024.0,
+            "y": 256.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/HeadingTuning/ErrorDeg",
+              "period": 0.1,
+              "data_type": "double"
+            }
+          },
+          {
+            "title": "Correção visual neste ciclo",
+            "x": 768.0,
+            "y": 384.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Vision/Accepted",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4280459371,
+              "false_color": 4283457136,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Fonte da correção",
+            "x": 1024.0,
+            "y": 384.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Vision/AcceptedSource",
+              "period": 0.1,
+              "data_type": "string"
+            }
+          },
+          {
+            "title": "Pose X (m)",
+            "x": 0.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Drive/Diagnostic/PoseX",
+              "period": 0.1,
+              "data_type": "double"
+            }
+          },
+          {
+            "title": "Pose Y (m)",
+            "x": 256.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Drive/Diagnostic/PoseY",
+              "period": 0.1,
+              "data_type": "double"
+            }
+          },
+          {
+            "title": "Heading (°)",
+            "x": 512.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Sharks/HeadingGraus",
+              "period": 0.1,
+              "data_type": "double"
+            }
+          },
+          {
+            "title": "Tags MT2 | último frame",
+            "x": 768.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Vision/MegaTag2/TagCount",
+              "period": 0.1,
+              "data_type": "int"
+            }
+          },
+          {
+            "title": "Heading no alvo",
+            "x": 1024.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/HeadingTuning/AtSetpoint",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4280459371,
+              "false_color": 4283457136,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Testes",
+      "grid_layout": {
+        "layouts": [],
+        "containers": [
+          {
+            "title": "Swerve | módulos reais/ SIM",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 512.0,
+            "height": 384.0,
+            "type": "SwerveDrive",
+            "properties": {
+              "topic": "/SmartDashboard/Sharks/Swerve",
+              "period": 0.06,
+              "rotation_unit": "Radians",
+              "show_robot_rotation": true
+            }
+          },
+          {
+            "title": "Velocidade do chassi (m/s)",
+            "x": 512.0,
+            "y": 0.0,
+            "width": 384.0,
+            "height": 256.0,
+            "type": "Graph",
+            "properties": {
+              "topic": "/SmartDashboard/Sharks/VelocidadeRealMps",
+              "period": 0.06,
+              "data_type": "double",
+              "time_displayed": 10.0,
+              "color": 4279667157,
+              "line_width": 2.0
+            }
+          },
+          {
+            "title": "Erro do Heading (°)",
+            "x": 896.0,
+            "y": 0.0,
+            "width": 384.0,
+            "height": 256.0,
+            "type": "Graph",
+            "properties": {
+              "topic": "/SmartDashboard/HeadingTuning/ErrorDeg",
+              "period": 0.06,
+              "data_type": "double",
+              "time_displayed": 10.0,
+              "color": 4279667157,
+              "line_width": 2.0
+            }
+          },
+          {
+            "title": "Bateria (V)",
+            "x": 512.0,
+            "y": 256.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Voltage View",
+            "properties": {
+              "topic": "/SmartDashboard/Sharks/BateriaVolts",
+              "period": 0.1,
+              "data_type": "double",
+              "min_value": 6.0,
+              "max_value": 13.0,
+              "divisions": 7
+            }
+          },
+          {
+            "title": "Falha crítica | Drive",
+            "x": 768.0,
+            "y": 256.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Drive/CriticalSensorFault",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4292559180,
+              "false_color": 4280459371,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Gyro físico conectado",
+            "x": 1024.0,
+            "y": 256.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/AdvantageKit/Drive/Gyro/Connected",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4280459371,
+              "false_color": 4283457136,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Amostras odometria / ciclo",
+            "x": 0.0,
+            "y": 384.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Odometry/SampleCount",
+              "period": 0.1,
+              "data_type": "int"
+            }
+          },
+          {
+            "title": "Amostras rejeitadas",
+            "x": 256.0,
+            "y": 384.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Odometry/RejectedSamples",
+              "period": 0.1,
+              "data_type": "int"
+            }
+          },
+          {
+            "title": "Lotes descartados (REAL)",
+            "x": 512.0,
+            "y": 384.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Odometry/DroppedQueueBatches",
+              "period": 0.1,
+              "data_type": "int"
+            }
+          },
+          {
+            "title": "Falhas CAN (REAL)",
+            "x": 768.0,
+            "y": 384.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Odometry/FailedSignalRefreshes",
+              "period": 0.1,
+              "data_type": "int"
+            }
+          },
+          {
+            "title": "Correção visual neste ciclo",
+            "x": 1024.0,
+            "y": 384.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Vision/Accepted",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4280459371,
+              "false_color": 4283457136,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "FL | corrente drive (A)",
+            "x": 0.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/Drive/Module0/DriveCurrentAmps",
+              "period": 0.1,
+              "data_type": "double"
+            }
+          },
+          {
+            "title": "FR | corrente drive (A)",
+            "x": 256.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/Drive/Module1/DriveCurrentAmps",
+              "period": 0.1,
+              "data_type": "double"
+            }
+          },
+          {
+            "title": "BL | corrente drive (A)",
+            "x": 512.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/Drive/Module2/DriveCurrentAmps",
+              "period": 0.1,
+              "data_type": "double"
+            }
+          },
+          {
+            "title": "BR | corrente drive (A)",
+            "x": 768.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/Drive/Module3/DriveCurrentAmps",
+              "period": 0.1,
+              "data_type": "double"
+            }
+          },
+          {
+            "title": "Tags MT2 | último frame",
+            "x": 1024.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Vision/MegaTag2/TagCount",
+              "period": 0.1,
+              "data_type": "int"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

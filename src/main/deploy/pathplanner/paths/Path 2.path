@@ -1,0 +1,54 @@
+{
+  "version": "2025.0",
+  "waypoints": [
+    {
+      "anchor": {
+        "x": 3.2627389443651924,
+        "y": 7.379643366619116
+      },
+      "prevControl": null,
+      "nextControl": {
+        "x": 3.2498002853067045,
+        "y": 5.658801711840229
+      },
+      "isLocked": false,
+      "linkedName": "Fim do Path1"
+    },
+    {
+      "anchor": {
+        "x": 3.2627389443651924,
+        "y": 5.632924393723252
+      },
+      "prevControl": {
+        "x": 3.2627389443651924,
+        "y": 7.392582025677603
+      },
+      "nextControl": null,
+      "isLocked": false,
+      "linkedName": "Fim do Path2"
+    }
+  ],
+  "rotationTargets": [],
+  "constraintZones": [],
+  "pointTowardsZones": [],
+  "eventMarkers": [],
+  "globalConstraints": {
+    "maxVelocity": 3.0,
+    "maxAcceleration": 3.0,
+    "maxAngularVelocity": 120.0,
+    "maxAngularAcceleration": 360.0,
+    "nominalVoltage": 12.0,
+    "unlimited": false
+  },
+  "goalEndState": {
+    "velocity": 0,
+    "rotation": -90.0
+  },
+  "reversed": false,
+  "folder": "Autonomo",
+  "idealStartingState": {
+    "velocity": 0,
+    "rotation": 0.0
+  },
+  "useDefaultConstraints": true
+}

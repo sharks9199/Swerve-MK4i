@@ -6,6 +6,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -58,6 +59,15 @@ public final class SwerveCommands {
 
     return Commands.run(
             () -> {
+              // O comando padrao pode ser agendado mesmo fora do teleop.
+              if (!DriverStation.isTeleopEnabled()) {
+                headingController.desativar();
+                inputProcessor.reset();
+                translationLimiter.reset(Translation2d.kZero);
+                omegaLimiter.reset(0.0);
+                drive.stop();
+                return;
+              }
 
               double rawLongitudinal = frenteTras.getAsDouble();
               double rawLateral = lateral.getAsDouble();

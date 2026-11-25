@@ -4,9 +4,8 @@
 
 package frc.robot;
 
-import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
-import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -28,8 +27,6 @@ import static edu.wpi.first.units.Units.Seconds;
    */
   public class Robot extends LoggedRobot {
     private Command m_autonomousCommand;
-
-    private final Field2d arena = new Field2d();
 
     private final RobotContainer m_robotContainer;
 
@@ -58,20 +55,19 @@ import static edu.wpi.first.units.Units.Seconds;
 
     }
 
-    @Override
-    public void robotInit(){
-      SmartDashboard.putData("Arena", arena);
-    }
-
-    public void setRobotPose(Pose2d pose) {
-      arena.setRobotPose(pose);
-    }
-
     /** Runs the command scheduler. Must be called every loop, regardless of mode. */
     @Override
     public void robotPeriodic() {
       CommandScheduler.getInstance().run();
       m_robotContainer.atualizarPosesPeloControle();
+      // Telemetria somente para o dashboard; não interfere nos comandos.
+      SmartDashboard.putNumber("Sharks/TempoPartida", DriverStation.getMatchTime());
+      SmartDashboard.putNumber("Sharks/BateriaVolts", RobotController.getBatteryVoltage());
+      SmartDashboard.putString("Sharks/Modo", DriverStation.isDisabled() ? "DISABLED"
+          : DriverStation.isAutonomous() ? "AUTO"
+          : DriverStation.isTest() ? "TESTE" : "TELEOP");
+      SmartDashboard.putBoolean("Sharks/AutoEmExecucao", DriverStation.isAutonomousEnabled()
+          && m_autonomousCommand != null && m_autonomousCommand.isScheduled());
     }
 
     @Override
@@ -92,6 +88,7 @@ import static edu.wpi.first.units.Units.Seconds;
     /** Schedules the autonomous command selected on the dashboard, if any. */
     @Override
     public void autonomousInit() {
+      m_robotContainer.aoIniciarAutonomo();
       m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
       if (m_autonomousCommand != null) {

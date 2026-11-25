@@ -3,7 +3,6 @@ package frc.robot.sharks.subsystems.swerve;
 import static edu.wpi.first.units.Units.Degrees;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.config.ModuleConfig;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
@@ -13,6 +12,8 @@ import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.util.sendable.Sendable;
+import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -23,7 +24,6 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -37,7 +37,6 @@ import frc.robot.sharks.OffsetsConstants;
 import frc.robot.sharks.subsystems.swerve.control.ChassisSpeedLimiter;
 import frc.robot.sharks.subsystems.swerve.control.DriveFeedforwardUtil;
 import frc.robot.sharks.subsystems.swerve.control.DriveSensorHealth;
-import frc.robot.sharks.subsystems.swerve.control.HeadingController;
 import frc.robot.sharks.subsystems.swerve.gyro.GyroIO;
 import frc.robot.sharks.subsystems.swerve.gyro.GyroIOInputsAutoLogged;
 import frc.robot.sharks.subsystems.swerve.gyro.GyroIOReal;
@@ -94,7 +93,6 @@ public class Drive extends SubsystemBase {
 
   private boolean modoLentoAtivo = false;
 
-  private HeadingController headingControllerAutonomo = null;
   private Rotation2d alvoHeadingAutonomo = null;
 
   private Consumer<Rotation2d> headingCorrectionListener = correcao -> {};
@@ -141,6 +139,21 @@ public class Drive extends SubsystemBase {
 
     SwerveOdometry.getInstance().start();
     SmartDashboard.putData("Arena", arena);
+    SmartDashboard.putData("Sharks/Swerve", new Sendable() {
+      @Override
+      public void initSendable(SendableBuilder builder) {
+        builder.setSmartDashboardType("SwerveDrive");
+        String[] nomes = {"Front Left", "Front Right", "Back Left", "Back Right"};
+        for (int i = 0; i < modules.length; i++) {
+          final int index = i;
+          builder.addDoubleProperty(nomes[i] + " Angle",
+              () -> modules[index].getAngle().getRadians(), null);
+          builder.addDoubleProperty(nomes[i] + " Velocity",
+              () -> modules[index].getVelocityMetersPerSec(), null);
+        }
+        builder.addDoubleProperty("Robot Angle", () -> getHeading().getRadians(), null);
+      }
+    });
 
     try {
       configurarAutonomo();
@@ -190,23 +203,9 @@ public class Drive extends SubsystemBase {
   }
 
   /** Configures PathPlanner's {@link AutoBuilder} (holonomic path follower). */
-  private void configurarAutonomo() {
-    DCMotor motorTracao = DCMotor.getKrakenX60Foc(1);
-    double raioRoda = Constants.Swerve.FRONT_LEFT.WheelRadius;
-    double reducao = Constants.Swerve.FRONT_LEFT.DriveMotorGearRatio;
-
-    RobotConfig config =
-        new RobotConfig(
-            Constants.Swerve.MASSA_COM_BATERIA_E_BUMPERS_KG,
-            Constants.Swerve.MOMENTO_INERCIA_ESTIMADO_KG_M2,
-            new ModuleConfig(
-                raioRoda,
-                motorTracao.freeSpeedRadPerSec / reducao * raioRoda,
-                Constants.Autonomo.COEFICIENTE_ATRITO_RODA,
-                motorTracao.withReduction(reducao),
-                Constants.Swerve.LIMITE_CORRENTE_TRACAO_AMPERES,
-                1),
-            getModuleTranslations());
+  private void configurarAutonomo() throws Exception {
+    // Fonte unica dos parametros fisicos do seguidor de trajetoria.
+    RobotConfig config = RobotConfig.fromGUISettings();
 
     AutoBuilder.configure(
         this::getPose,
@@ -222,29 +221,24 @@ public class Drive extends SubsystemBase {
         this);
 
     PathPlannerLogging.setLogActivePathCallback(
-        path -> Logger.recordOutput("Autonomo/Trajetoria", path.toArray(new Pose2d[0])));
+        path -> {
+          Logger.recordOutput("Autonomo/Trajetoria", path.toArray(new Pose2d[0]));
+          arena.getObject("Trajetoria").setPoses(path);
+        });
     PathPlannerLogging.setLogTargetPoseCallback(
         pose -> {
 
           alvoHeadingAutonomo = pose.getRotation();
           Logger.recordOutput("Autonomo/PoseAlvo", pose);
+          arena.getObject("Alvo").setPose(pose);
         });
   }
 
-  /**
-   * Makes path following use the given {@link HeadingController} for rotation, exactly like
-   * teleop does while translating. PathPlanner still provides translation; its rotation output is
-   * replaced by the controller's, which tracks the path's target heading.
-   *
-   * @param headingController controller shared with teleop (its dashboard tuning applies here too)
-   */
-  public void usarHeadingControllerNoAutonomo(HeadingController headingController) {
-    this.headingControllerAutonomo = headingController;
-  }
-
-  /** Clears the path heading target and releases the heading controller (call when auto ends). */
+  /** Clears the autonomous target and Field overlays (call when auto ends). */
   public void limparAlvoAutonomo() {
     alvoHeadingAutonomo = null;
+    arena.getObject("Trajetoria").setPoses(java.util.List.of());
+    arena.getObject("Alvo").setPoses(java.util.List.of());
   }
 
   /**
@@ -257,12 +251,7 @@ public class Drive extends SubsystemBase {
     this.headingCorrectionListener = listener != null ? listener : correcao -> {};
   }
 
-  /**
-   * Output used by PathPlanner. Keeps the path's translation and replaces its rotation with the
-   * {@link HeadingController} output driving the robot toward the path's target heading.
-   *
-   * @param speeds robot-relative speeds computed by PathPlanner
-   */
+  /** Applies all three robot-relative speeds from PathPlanner, including rotation. */
   private void runVelocityAutonomo(ChassisSpeeds speeds, DriveFeedforwards feedforwards) {
     // Voltage closed loop: PathPlanner wheel acceleration times characterized kA.
     // Requires SysId and disabled by default until the real drivetrain is validated.
@@ -273,28 +262,28 @@ public class Drive extends SubsystemBase {
         Constants.Autonomo.FF_AUTONOMO_HABILITADO);
     Logger.recordOutput("Autonomo/DriveFFVolts", feedforwardVolts);
 
-    if (headingControllerAutonomo == null || alvoHeadingAutonomo == null) {
+    // Nao substituir omega: uma ordem de parada deve continuar sendo zero.
+    Logger.recordOutput("Autonomo/OmegaPathPlannerRadS", speeds.omegaRadiansPerSecond);
+    runVelocity(speeds, feedforwardVolts);
+  }
 
-      runVelocity(speeds, feedforwardVolts);
-      return;
+  /** Publishes the actual PathPlanner heading target without applying teleop heading control. */
+  private void atualizarDashboardHeadingAutonomo() {
+    Rotation2d atual = getHeading();
+    Rotation2d alvo = alvoHeadingAutonomo != null ? alvoHeadingAutonomo : atual;
+    double erroRad = MathUtil.angleModulus(alvo.getRadians() - atual.getRadians());
+    boolean possuiAlvo = alvoHeadingAutonomo != null;
+    // Preserve the topics used by the existing Elastic layout.
+    SmartDashboard.putNumber("HeadingTuning/CurrentHeadingDeg", atual.getDegrees());
+    SmartDashboard.putNumber("HeadingTuning/TargetHeadingDeg", alvo.getDegrees());
+    SmartDashboard.putNumber("HeadingTuning/ErrorDeg", Math.toDegrees(erroRad));
+    SmartDashboard.putBoolean("HeadingTuning/Active", false);
+    SmartDashboard.putBoolean("HeadingTuning/AtSetpoint", possuiAlvo
+        && Math.abs(erroRad) <= Constants.Heading.TOLERANCIA_POSICAO_RAD
+        && Math.abs(getYawVelocityRadPerSec()) <= Constants.Heading.TOLERANCIA_VELOCIDADE_RAD_S);
+    if (possuiAlvo) {
+      Logger.recordOutput("Autonomo/HeadingAlvo", alvo);
     }
-
-    if (!headingControllerAutonomo.estaAtivo()) {
-
-      headingControllerAutonomo.definirHeading(
-          alvoHeadingAutonomo, getHeading(), getYawVelocityRadPerSec());
-    } else {
-      headingControllerAutonomo.definirHeading(alvoHeadingAutonomo);
-    }
-
-    double omega = headingControllerAutonomo.calcular(getHeading());
-    headingControllerAutonomo.atualizarDashboard(getHeading(), omega);
-
-    Logger.recordOutput("Autonomo/HeadingAlvo", alvoHeadingAutonomo);
-    Logger.recordOutput("Autonomo/OmegaHeadingController", omega);
-
-    runVelocity(new ChassisSpeeds(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond, omega),
-        feedforwardVolts);
   }
 
   @Override
@@ -334,6 +323,13 @@ public class Drive extends SubsystemBase {
         DriveSensorHealth.criticalFault(gyroInputs.connected, getModuleHealth());
     Logger.recordOutput("Drive/CriticalSensorFault", criticalSensorFault);
     arena.setRobotPose(getPose());
+    ChassisSpeeds velocidadesMedidas = getChassisSpeeds();
+    SmartDashboard.putNumber("Sharks/VelocidadeRealMps",
+        Math.hypot(velocidadesMedidas.vxMetersPerSecond, velocidadesMedidas.vyMetersPerSecond));
+    SmartDashboard.putNumber("Sharks/HeadingGraus", getHeading().getDegrees());
+    if (DriverStation.isAutonomousEnabled()) {
+      atualizarDashboardHeadingAutonomo();
+    }
 
     gyroDisconnectedAlert.set(!gyroInputs.connected && Constants.MODO_ATUAL == Constants.Mode.REAL);
 

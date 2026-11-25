@@ -43,8 +43,12 @@ public class RobotContainer {
     private final SendableChooser<Command> meuSeletorAuto;
 
     public RobotContainer() {
-        swerve.usarHeadingControllerNoAutonomo(headingController);
-        swerve.setHeadingCorrectionListener(headingController::aplicarCorrecaoReferencia);
+        // O Heading Controller da Sharks pertence exclusivamente ao teleop.
+        swerve.setHeadingCorrectionListener(correcao -> {
+            if (DriverStation.isTeleopEnabled()) {
+                headingController.aplicarCorrecaoReferencia(correcao);
+            }
+        });
 
         configureNamedCommands();
         meuSeletorAuto = doAutoSelector();
@@ -55,15 +59,15 @@ public class RobotContainer {
     }
 
     private void configureBindings() {
-        swerve.setDefaultCommand(
-            SwerveCommands.movimentacaoDrive(
+        Command driveCommand = SwerveCommands.movimentacaoDrive(
                 swerve,
                 headingController,
                 () -> -driverController.getLeftY(),
                 () -> -driverController.getLeftX(),
                 () -> -driverController.getRightX()
-            )
-        );
+            );
+        driveCommand.setName("SwerveTeleop");
+        swerve.setDefaultCommand(driveCommand);
     }
 
     /**
@@ -125,6 +129,8 @@ public class RobotContainer {
         );
     }
 
+    /** Observation only; runs even with no dashboard connected. */
+    
     private void configureNamedCommands() {
         // Register PathPlanner event commands here when needed.
     }
@@ -144,12 +150,18 @@ public class RobotContainer {
         }
     }
 
+    /** Disables teleop heading hold before the autonomous command is scheduled. */
+    public void aoIniciarAutonomo() {
+        headingController.desativar();
+    }
+
     public Command getAutonomousCommand() {
         Command autoSelecionado = meuSeletorAuto.getSelected();
         return autoSelecionado != null ? autoSelecionado : Commands.none();
     }
 
     public void aoFinalizarAutonomo() {
+        swerve.stop();
         swerve.limparAlvoAutonomo();
         headingController.desativar();
     }
