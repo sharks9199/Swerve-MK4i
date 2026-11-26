@@ -13,6 +13,7 @@ import frc.robot.sharks.subsystems.swerve.Drive;
 import frc.robot.sharks.subsystems.swerve.SwerveOdometry;
 
 import java.util.Queue;
+import frc.robot.sharks.util.PhoenixUtil;
 
 /** {@link GyroIO} implementation for a CTRE Pigeon 2. */
 public class GyroIOReal implements GyroIO {
@@ -23,18 +24,24 @@ public class GyroIOReal implements GyroIO {
   private final StatusSignal<Angle> yaw = pigeon.getYaw();
   private final StatusSignal<AngularVelocity> yawVelocity = pigeon.getAngularVelocityZWorld();
 
+  private final StatusSignal<Angle> pitch = pigeon.getPitch();
+  private final StatusSignal<Angle> roll = pigeon.getRoll();
+  private final boolean configured;
   private final Queue<Double> yawPositionQueue;
   private final Queue<Double> yawTimestampQueue;
 
   /** Configures the Pigeon 2, zeroes its yaw and registers its signals with the odometry thread. */
   public GyroIOReal() {
-    pigeon.getConfigurator().apply(Constants.Swerve.CONFIGURACAO_PIGEON);
-
-    pigeon.getConfigurator().setYaw(0.0);
+    configured = PhoenixUtil.tryUntilOk("Pigeon 2", 5,
+        () -> pigeon.getConfigurator().apply(Constants.Swerve.CONFIGURACAO_PIGEON))
+        && PhoenixUtil.tryUntilOk("Zero Pigeon 2", 5,
+            () -> pigeon.getConfigurator().setYaw(0.0));
 
     yaw.setUpdateFrequency(Drive.ODOMETRY_FREQUENCY);
     yawVelocity.setUpdateFrequency(50.0);
 
+    pitch.setUpdateFrequency(50.0);
+    roll.setUpdateFrequency(50.0);
     pigeon.optimizeBusUtilization();
 
     yawTimestampQueue = SwerveOdometry.getInstance().makeTimestampQueue();
@@ -44,8 +51,10 @@ public class GyroIOReal implements GyroIO {
 
   @Override
   public void updateInputs(GyroIOInputs inputs) {
-    inputs.connected = BaseStatusSignal.refreshAll(yaw, yawVelocity).equals(StatusCode.OK);
+    inputs.connected = BaseStatusSignal.refreshAll(yaw, yawVelocity, pitch, roll).equals(StatusCode.OK) && configured;
 
+    inputs.pitchDegrees = pitch.getValueAsDouble();
+    inputs.rollDegrees = roll.getValueAsDouble();
     inputs.yawPosition = Rotation2d.fromDegrees(yaw.getValueAsDouble());
 
     inputs.yawVelocityRadPerSec = Units.degreesToRadians(yawVelocity.getValueAsDouble());

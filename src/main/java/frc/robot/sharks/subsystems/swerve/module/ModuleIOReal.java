@@ -46,6 +46,10 @@ public class ModuleIOReal implements ModuleIO {
           TalonFXConfiguration, TalonFXConfiguration, CANcoderConfiguration>
       constants;
 
+  private final boolean driveConfigured;
+  private final boolean turnConfigured;
+  private final boolean encoderConfigured;
+  private double couplingReference = Double.NaN;
   private final TalonFX driveTalon;
   private final TalonFX turnTalon;
   private final CANcoder cancoder;
@@ -103,14 +107,20 @@ public class ModuleIOReal implements ModuleIO {
     driveConfig.TorqueCurrent.PeakReverseTorqueCurrent = -constants.SlipCurrent;
     driveConfig.CurrentLimits.StatorCurrentLimit = constants.SlipCurrent;
     driveConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+    driveConfig.CurrentLimits.SupplyCurrentLimit = Constants.Swerve.LIMITE_ALIMENTACAO_TRACAO_A;
+    driveConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
     driveConfig.MotorOutput.Inverted =
         constants.DriveMotorInverted
             ? InvertedValue.Clockwise_Positive
             : InvertedValue.CounterClockwise_Positive;
-    tryUntilOk(5, () -> driveTalon.getConfigurator().apply(driveConfig, 0.25));
-    tryUntilOk(5, () -> driveTalon.setPosition(0.0, 0.25));
+    driveConfigured = tryUntilOk("Drive " + constants.DriveMotorId, 5,
+        () -> driveTalon.getConfigurator().apply(driveConfig, 0.25))
+        && tryUntilOk("Zero drive " + constants.DriveMotorId, 5,
+            () -> driveTalon.setPosition(0.0, 0.25));
 
-    var turnConfig = new TalonFXConfiguration();
+    var turnConfig = constants.SteerMotorInitialConfigs;
+    turnConfig.CurrentLimits.SupplyCurrentLimit = Constants.Swerve.LIMITE_ALIMENTACAO_DIRECAO_A;
+    turnConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
     turnConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
     turnConfig.Slot0 = constants.SteerMotorGains;
     turnConfig.Feedback.FeedbackRemoteSensorID = constants.EncoderId;
@@ -133,7 +143,8 @@ public class ModuleIOReal implements ModuleIO {
         constants.SteerMotorInverted
             ? InvertedValue.Clockwise_Positive
             : InvertedValue.CounterClockwise_Positive;
-    tryUntilOk(5, () -> turnTalon.getConfigurator().apply(turnConfig, 0.25));
+    turnConfigured = tryUntilOk("Steer " + constants.SteerMotorId, 5,
+        () -> turnTalon.getConfigurator().apply(turnConfig, 0.25));
 
     CANcoderConfiguration cancoderConfig = constants.EncoderInitialConfigs;
     cancoderConfig.MagnetSensor.MagnetOffset = constants.EncoderOffset;
@@ -141,7 +152,8 @@ public class ModuleIOReal implements ModuleIO {
         constants.EncoderInverted
             ? SensorDirectionValue.Clockwise_Positive
             : SensorDirectionValue.CounterClockwise_Positive;
-    cancoder.getConfigurator().apply(cancoderConfig);
+    encoderConfigured = tryUntilOk("CANcoder " + constants.EncoderId, 5,
+        () -> cancoder.getConfigurator().apply(cancoderConfig, 0.25));
 
     timestampQueue = SwerveOdometry.getInstance().makeTimestampQueue();
 
@@ -181,14 +193,17 @@ public class ModuleIOReal implements ModuleIO {
         BaseStatusSignal.refreshAll(turnPosition, turnVelocity, turnAppliedVolts, turnCurrent);
     var turnEncoderStatus = BaseStatusSignal.refreshAll(turnAbsolutePosition);
 
-    inputs.driveConnected = driveConnectedDebounce.calculate(driveStatus.isOK());
+    // Falha imediata; debounce apenas para recuperar a conexao.
+    inputs.driveConnected = driveConfigured && driveConnectedDebounce.calculate(driveStatus.isOK());
+    inputs.rawDriveRotations = drivePosition.getValueAsDouble();
+    inputs.rawTurnRotations = turnPosition.getValueAsDouble();
     inputs.drivePositionRad = Units.rotationsToRadians(drivePosition.getValueAsDouble());
     inputs.driveVelocityRadPerSec = Units.rotationsToRadians(driveVelocity.getValueAsDouble());
     inputs.driveAppliedVolts = driveAppliedVolts.getValueAsDouble();
     inputs.driveCurrentAmps = driveCurrent.getValueAsDouble();
 
-    inputs.turnConnected = turnConnectedDebounce.calculate(turnStatus.isOK());
-    inputs.turnEncoderConnected = turnEncoderConnectedDebounce.calculate(turnEncoderStatus.isOK());
+    inputs.turnConnected = turnConfigured && turnConnectedDebounce.calculate(turnStatus.isOK());
+    inputs.turnEncoderConnected = encoderConfigured && turnEncoderConnectedDebounce.calculate(turnEncoderStatus.isOK());
     inputs.turnAbsolutePosition = Rotation2d.fromRotations(turnAbsolutePosition.getValueAsDouble());
     inputs.turnPosition = Rotation2d.fromRotations(turnPosition.getValueAsDouble());
     inputs.turnVelocityRadPerSec = Units.rotationsToRadians(turnVelocity.getValueAsDouble());
@@ -197,10 +212,29 @@ public class ModuleIOReal implements ModuleIO {
 
     inputs.odometryTimestamps =
         timestampQueue.stream().mapToDouble((Double value) -> value).toArray();
-    inputs.odometryDrivePositionsRad =
-        drivePositionQueue.stream()
-            .mapToDouble((Double value) -> Units.rotationsToRadians(value))
-            .toArray();
+    double[] driveSamples = drivePositionQueue.stream().mapToDouble(Double::doubleValue).toArray();
+    double[] turnSamples = turnPositionQueue.stream().mapToDouble(Double::doubleValue).toArray();
+    int count = Math.min(driveSamples.length, turnSamples.length);
+    inputs.odometryDrivePositionsRad = new double[count];
+    double ratio = couplingRatio();
+    if (ratio != 0.0 && !Double.isFinite(couplingReference)) {
+      for (int i = 0; i < count; i++) {
+        if (Double.isFinite(driveSamples[i]) && Double.isFinite(turnSamples[i])) {
+          couplingReference = turnSamples[i];
+          break;
+        }
+      }
+    }
+    for (int i = 0; i < count; i++) {
+      inputs.odometryDrivePositionsRad[i] = Units.rotationsToRadians(ratio == 0.0
+          ? driveSamples[i]
+          : driveSamples[i] - ratio * (turnSamples[i] - couplingReference));
+    }
+    if (ratio != 0.0 && Double.isFinite(couplingReference)) {
+      inputs.drivePositionRad -= Units.rotationsToRadians(
+          ratio * (turnPosition.getValueAsDouble() - couplingReference));
+      inputs.driveVelocityRadPerSec -= ratio * inputs.turnVelocityRadPerSec;
+    }
     inputs.odometryTurnPositions =
         turnPositionQueue.stream()
             .map((Double value) -> Rotation2d.fromRotations(value))
@@ -236,11 +270,22 @@ public class ModuleIOReal implements ModuleIO {
   @Override
   public void setDriveVelocity(double velocityRadPerSec, double feedforwardVolts) {
     double velocityRotPerSec = Units.radiansToRotations(velocityRadPerSec);
+    double ratio = couplingRatio();
+    if (ratio != 0.0 && turnVelocity.getStatus().isOK()
+        && Double.isFinite(turnVelocity.getValueAsDouble())) {
+      velocityRotPerSec += ratio * turnVelocity.getValueAsDouble();
+    }
     driveTalon.setControl(
         switch (constants.DriveMotorClosedLoopOutput) {
           case Voltage -> velocityVoltageRequest.withVelocity(velocityRotPerSec).withFeedForward(feedforwardVolts);
           case TorqueCurrentFOC -> velocityTorqueCurrentRequest.withVelocity(velocityRotPerSec);
         });
+  }
+
+  private double couplingRatio() {
+    // Talon FX reports wheel-side rotations because SensorToMechanismRatio is set.
+    return Constants.Swerve.COMPENSAR_ACOPLAMENTO
+        ? constants.CouplingGearRatio / constants.DriveMotorGearRatio : 0.0;
   }
 
   @Override

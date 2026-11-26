@@ -1,7 +1,6 @@
 package frc.robot.sharks.subsystems.vision;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
@@ -55,7 +54,7 @@ public class VisionIOSim implements VisionIO {
   private static final double SINGLE_TAG_AMBIGUITY = 0.007;
 
   private final AprilTagFieldLayout layout =
-      AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+      AprilTagFieldLayout.loadField(Constants.Vision.CAMPO);
   private final Supplier<Pose2d> truePoseSupplier;
   private final Random random = new Random(0);
 

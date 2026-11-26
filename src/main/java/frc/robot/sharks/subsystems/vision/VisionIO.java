@@ -16,6 +16,7 @@ public interface VisionIO {
     public int aprilTagID = -1;
     public double tx = 0.0;
     public double ty = 0.0;
+    public double areaGamepiece = 0.0;
 
     public int quantidadeTagsMegaTag1 = 0;
     public double distanciaMediaTagsMegaTag1 = 0.0;

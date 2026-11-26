@@ -43,6 +43,7 @@ public final class HeadingController {
 
   private double ultimoOmegaPidRadS = 0.0;
   private double ultimoErroRad = 0.0;
+  private double ultimoYawRateRadS = Double.NaN;
 
   /** Creates the controller and publishes default tuning values to the dashboard. */
   public HeadingController() {
@@ -137,7 +138,8 @@ public final class HeadingController {
    * @param headingAtual current robot heading
    * @return angular velocity command, in rad/s; zero if inactive or already at the goal
    */
-  public double calcular(Rotation2d headingAtual) {
+  public double calcular(Rotation2d headingAtual, double yawRateRadS) {
+    ultimoYawRateRadS = yawRateRadS;
     atualizarTuningDoElastic();
 
     if (!ativo) {
@@ -148,13 +150,15 @@ public final class HeadingController {
 
     ultimoErroRad = MathUtil.angleModulus(headingAlvo.getRadians() - headingAtual.getRadians());
 
-    if (Math.abs(ultimoErroRad) <= toleranciaPosicaoRad
-        && Math.abs(controller.getSetpoint().velocity) <= toleranciaVelocidadeRadS) {
+    if (!Double.isFinite(yawRateRadS) || !Double.isFinite(headingAtual.getRadians())) {
+      desativar();
+      return 0.0;
+    }
+    double omega = controller.calculate(headingAtual.getRadians(), headingAlvo.getRadians());
+    if (estaNoAlvo()) {
       ultimoOmegaPidRadS = 0.0;
       return 0.0;
     }
-
-    double omega = controller.calculate(headingAtual.getRadians(), headingAlvo.getRadians());
 
     ultimoOmegaPidRadS =
         MathUtil.clamp(omega, -velocidadeCorrecaoMaximaRadS, velocidadeCorrecaoMaximaRadS);
@@ -167,7 +171,8 @@ public final class HeadingController {
    * @param headingAtual current robot heading
    * @param omegaAplicadoRadS angular velocity actually applied to the chassis, in rad/s
    */
-  public void atualizarDashboard(Rotation2d headingAtual, double omegaAplicadoRadS) {
+  public void atualizarDashboard(Rotation2d headingAtual, double omegaAplicadoRadS, double yawRateRadS) {
+    ultimoYawRateRadS = yawRateRadS;
     atualizarTuningDoElastic();
 
     double erroAtualRad =
@@ -200,14 +205,19 @@ public final class HeadingController {
    * Reads tuning values from the dashboard, clamps them to safe ranges and applies them to the
    * controller when they have changed.
    */
+  private static double tuningNumber(String key, double fallback) {
+    double value = SmartDashboard.getNumber(DASHBOARD + key, fallback);
+    return Double.isFinite(value) ? value : fallback;
+  }
+
   private void atualizarTuningDoElastic() {
 
     double novoKP =
-        MathUtil.clamp(SmartDashboard.getNumber(DASHBOARD + "kP", Constants.Heading.KP), 0.0, 60.0);
+        MathUtil.clamp(tuningNumber("kP", kP), 0.0, 60.0);
     double novoKI =
-        MathUtil.clamp(SmartDashboard.getNumber(DASHBOARD + "kI", Constants.Heading.KI), 0.0, 5.0);
+        MathUtil.clamp(tuningNumber("kI", kI), 0.0, 5.0);
     double novoKD =
-        MathUtil.clamp(SmartDashboard.getNumber(DASHBOARD + "kD", Constants.Heading.KD), 0.0, 20.0);
+        MathUtil.clamp(tuningNumber("kD", kD), 0.0, 20.0);
 
     if (novoKP != kP || novoKI != kI || novoKD != kD) {
       kP = novoKP;
@@ -218,29 +228,29 @@ public final class HeadingController {
 
     double maxCorrecaoDegS =
         MathUtil.clamp(
-            SmartDashboard.getNumber(
-                DASHBOARD + "MaxCorrectionDegPerSec",
+            tuningNumber(
+                "MaxCorrectionDegPerSec",
                 Units.radiansToDegrees(Constants.Heading.VELOCIDADE_CORRECAO_MAXIMA_RAD_S)),
             1.0,
             720.0);
     double maxAccelDegS2 =
         MathUtil.clamp(
-            SmartDashboard.getNumber(
-                DASHBOARD + "MaxCorrectionAccelDegPerSec2",
+            tuningNumber(
+                "MaxCorrectionAccelDegPerSec2",
                 Units.radiansToDegrees(Constants.Heading.ACELERACAO_CORRECAO_MAXIMA_RAD_S2)),
             10.0,
             5000.0);
     double toleranciaPosicaoDeg =
         MathUtil.clamp(
-            SmartDashboard.getNumber(
-                DASHBOARD + "PositionToleranceDeg",
+            tuningNumber(
+                "PositionToleranceDeg",
                 Units.radiansToDegrees(Constants.Heading.TOLERANCIA_POSICAO_RAD)),
             0.05,
             20.0);
     double toleranciaVelocidadeDegS =
         MathUtil.clamp(
-            SmartDashboard.getNumber(
-                DASHBOARD + "VelocityToleranceDegPerSec",
+            tuningNumber(
+                "VelocityToleranceDegPerSec",
                 Units.radiansToDegrees(Constants.Heading.TOLERANCIA_VELOCIDADE_RAD_S)),
             0.1,
             180.0);
@@ -270,6 +280,8 @@ public final class HeadingController {
   public boolean estaNoAlvo() {
     return ativo
         && Math.abs(ultimoErroRad) <= toleranciaPosicaoRad
+        && Double.isFinite(ultimoYawRateRadS)
+        && Math.abs(ultimoYawRateRadS) <= toleranciaVelocidadeRadS
         && Math.abs(controller.getSetpoint().velocity) <= toleranciaVelocidadeRadS;
   }
 

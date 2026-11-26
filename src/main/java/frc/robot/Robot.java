@@ -59,6 +59,11 @@ import static edu.wpi.first.units.Units.Seconds;
     @Override
     public void robotPeriodic() {
       CommandScheduler.getInstance().run();
+      if (DriverStation.isAutonomousEnabled() && m_robotContainer.isDriveSafetyBlocked()
+          && m_autonomousCommand != null && m_autonomousCommand.isScheduled()) {
+        m_autonomousCommand.cancel();
+        m_robotContainer.aoFinalizarAutonomo();
+      }
       m_robotContainer.atualizarPosesPeloControle();
       // Telemetria somente para o dashboard; não interfere nos comandos.
       SmartDashboard.putNumber("Sharks/TempoPartida", DriverStation.getMatchTime());

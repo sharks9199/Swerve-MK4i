@@ -2,6 +2,7 @@ package frc.robot.sharks;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -56,6 +57,12 @@ public class RobotContainer {
 
         configureBindings();
         configureButtons();
+        swerve.setSysIdDeadman(() -> sticksNeutral() && driverController.getLeftBumperButton()
+            && driverController.getRightBumperButton());
+        SmartDashboard.putData("SysId/QuasistaticForward", swerve.sysId(false, SysIdRoutine.Direction.kForward));
+        SmartDashboard.putData("SysId/QuasistaticReverse", swerve.sysId(false, SysIdRoutine.Direction.kReverse));
+        SmartDashboard.putData("SysId/DynamicForward", swerve.sysId(true, SysIdRoutine.Direction.kForward));
+        SmartDashboard.putData("SysId/DynamicReverse", swerve.sysId(true, SysIdRoutine.Direction.kReverse));
     }
 
     private void configureBindings() {
@@ -81,10 +88,30 @@ public class RobotContainer {
         new Trigger(() -> DriverStation.isTeleopEnabled() && driverController.getAButton())
             .onTrue(Commands.runOnce(swerve::alternarModoLento));
 
+        new Trigger(() -> DriverStation.isTeleopEnabled() && driverController.getBackButton())
+            .onTrue(Commands.runOnce(() -> swerve.rearmSafety(sticksNeutral()
+                && !driverController.getYButton() && !driverController.getLeftStickButton()
+                && !driverController.getRightBumperButton())));
+        new Trigger(() -> DriverStation.isTeleopEnabled() && driverController.getYButton()
+                && DriverStation.isJoystickConnected(Constants.Controles.PORTA_DRIVER) && sticksNeutral())
+            .whileTrue(Commands.runEnd(swerve::xLock, swerve::stop, swerve));
+        new Trigger(() -> DriverStation.isTeleopEnabled() && driverController.getLeftStickButton() && !driverController.getYButton()
+                && DriverStation.isJoystickConnected(Constants.Controles.PORTA_DRIVER) && sticksNeutral())
+            .whileTrue(Commands.runEnd(() -> {
+                if (!vision.hasFreshAprilTag()) { swerve.stop(); return; }
+                double omega = edu.wpi.first.math.MathUtil.clamp(-(vision.getTx() - OffsetsConstants.Limelight.TX_ALVO_GRAUS) * Constants.Seguranca.ALINHAMENTO_KP,
+                    -Constants.Seguranca.ALINHAMENTO_MAX_RAD_S, Constants.Seguranca.ALINHAMENTO_MAX_RAD_S);
+                swerve.runVelocity(new edu.wpi.first.math.kinematics.ChassisSpeeds(0.0, 0.0, omega));
+            }, swerve::stop, swerve, vision).withTimeout(3.0));
+
         // No SIM, o Right Bumper continua reservado ao elevador visual.
         new Trigger(() -> DriverStation.isTeleopEnabled()
                 && Constants.MODO_ATUAL != Constants.Mode.SIM
-                && driverController.getRightBumperButton())
+                && DriverStation.isJoystickConnected(Constants.Controles.PORTA_DRIVER)
+                && driverController.getRightBumperButton() && !driverController.getYButton()
+                && !driverController.getLeftStickButton()
+                && Math.hypot(driverController.getLeftX(), driverController.getLeftY()) < 0.15
+                && Math.abs(driverController.getRightX()) < 0.15)
             .whileTrue(trackgamepiece);
 
         // Elevator presets are only available while teleoperated control is enabled.
@@ -107,6 +134,14 @@ public class RobotContainer {
             .onTrue(Commands.runOnce(() ->
                 RobotComponents.selecionarPresetElevador(RobotState.PresetElevador.L4)));
     }
+
+    private boolean sticksNeutral() {
+        return DriverStation.isJoystickConnected(Constants.Controles.PORTA_DRIVER)
+            && Math.hypot(driverController.getLeftX(), driverController.getLeftY()) < 0.08
+            && Math.abs(driverController.getRightX()) < 0.08;
+    }
+
+    public boolean isDriveSafetyBlocked() { return swerve.isSafetyBlocked(); }
 
     /** Updates visualization-only mechanism targets from the Xbox controller. */
     public void atualizarPosesPeloControle() {

@@ -95,6 +95,12 @@ public final class Constants {
 
     /** Steer motor stator current limit, in amps. */
     public static final double LIMITE_CORRENTE_DIRECAO_AMPERES = 40.0;
+    // Limites de alimentacao (distintos dos limites de estator).
+    // Valores iniciais conservadores; validar no robo real.
+    public static final double LIMITE_ALIMENTACAO_TRACAO_A = 35.0;
+    public static final double LIMITE_ALIMENTACAO_DIRECAO_A = 20.0;
+    // Ativar somente apos medir o sinal e a magnitude do acoplamento em cada modulo.
+    public static final boolean COMPENSAR_ACOPLAMENTO = false;
 
     // =======================================================================
     // SHARKS | AJUSTES PRINCIPAIS DE VELOCIDADE
@@ -104,31 +110,31 @@ public final class Constants {
     // =======================================================================
 
     /** Modo lento: velocidade linear maxima do centro do robo (m/s). */
-    public static final double VELOCIDADE_MAXIMA_MPS_LENTO = 1.50;
+    public static final double VELOCIDADE_MAXIMA_MPS_LENTO = 2.50;
 
     /** Modo lento: aceleracao linear maxima solicitada (m/s^2). */
-    public static final double ACELERACAO_MAXIMA_MPS2_LENTO = 1.50;
+    public static final double ACELERACAO_MAXIMA_MPS2_LENTO = 2.50;
 
     /** Modo rapido: velocidade linear maxima do centro do robo (m/s). */
-    public static final double VELOCIDADE_MAXIMA_MPS_RAPIDO = 3.00;
+    public static final double VELOCIDADE_MAXIMA_MPS_RAPIDO = 4.30;
 
     /** Modo rapido: aceleracao linear maxima solicitada (m/s^2). */
-    public static final double ACELERACAO_MAXIMA_MPS2_RAPIDO = 3.00;
+    public static final double ACELERACAO_MAXIMA_MPS2_RAPIDO = 4.00;
 
     /** Modo lento: velocidade angular maxima (rad/s). */
     public static final double VELOCIDADE_ANGULAR_MAXIMA_RAD_S_LENTO =
-        Units.degreesToRadians(120.0);
+        Units.degreesToRadians(240.0);
 
     /** Modo rapido: velocidade angular maxima (rad/s). */
     public static final double VELOCIDADE_ANGULAR_MAXIMA_RAD_S_RAPIDO =
-        Units.degreesToRadians(300.0);
+        Units.degreesToRadians(600.0);
 
     /** Aceleracao angular limitada no comando do piloto (rad/s^2). */
     public static final double ACELERACAO_ANGULAR_MAXIMA_RAD_S2 =
         Units.degreesToRadians(360.0);
 
     /** Limite fisico TEORICO a 12 V; nao equivale a velocidade validada em campo. */
-    public static final double VELOCIDADE_MAXIMA_FISICA_ESTIMADA_MPS = 4.20;
+    public static final double VELOCIDADE_MAXIMA_FISICA_ESTIMADA_MPS = 4.40;
 
     /** Valor global de referencia para diagnosticos e configuracoes legadas. */
     public static final double VELOCIDADE_MAXIMA_MPS =
@@ -393,6 +399,22 @@ public final class Constants {
     private ControlesDrive() {}
   }
 
+  /** Limites iniciais de protecao; validar com o centro de massa real. */
+  public static final class Seguranca {
+    public static final double WATCHDOG_ODOMETRIA_S = 0.10;
+    public static final double TEMPO_RECUPERACAO_S = 0.50;
+    public static final double TENSAO_REDUCAO_V = 10.0;
+    public static final double TENSAO_PARADA_V = 7.0;
+    public static final double INCLINACAO_REDUCAO_GRAUS = 10.0;
+    public static final double INCLINACAO_PARADA_GRAUS = 18.0;
+    // SysId somente em TEST, com supervisao e area livre; habilitar apos revisao.
+    public static final boolean SYSID_HABILITADO = false;
+    // Alinhamento apenas angular, sem aproximacao automatica.
+    public static final double ALINHAMENTO_KP = 0.05;
+    public static final double ALINHAMENTO_MAX_RAD_S = 0.8;
+    private Seguranca() {}
+  }
+
   /** Heading-hold controller parameters. */
   public static final class Heading {
     public static final double KP = 30.0;
@@ -406,7 +428,7 @@ public final class Constants {
     public static final double ACELERACAO_CORRECAO_MAXIMA_RAD_S2 = Units.degreesToRadians(540.0);
 
     /** Position error below which the heading is considered reached, in radians. */
-    public static final double TOLERANCIA_POSICAO_RAD = Units.degreesToRadians(0.1);
+    public static final double TOLERANCIA_POSICAO_RAD = Units.degreesToRadians(0.5);
 
     /** Velocity below which the heading is considered settled, in rad/s. */
     public static final double TOLERANCIA_VELOCIDADE_RAD_S = Units.degreesToRadians(2.0);
@@ -436,6 +458,13 @@ public final class Constants {
 
   /** Limelight / AprilTag vision parameters. */
   public static final class Vision {
+    // A area ta da Limelight e uma proxy de proximidade, nao distancia em metros.
+    // Calibrar com a peca real antes de permitir aproximacao automatica.
+    public static final boolean APROXIMACAO_GAMEPIECE_HABILITADA = false;
+    public static final double AREA_PARADA_GAMEPIECE_PERCENT = 0.0;
+    public static final double IDADE_MAXIMA_GAMEPIECE_S = 0.20;
+    public static final edu.wpi.first.apriltag.AprilTagFields CAMPO =
+        edu.wpi.first.apriltag.AprilTagFields.k2026RebuiltWelded;
     /** NetworkTables name of the Limelight camera. */
     public static final String NOME_LIMELIGHT = "limelight-sharks";
 

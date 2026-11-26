@@ -101,6 +101,21 @@ public class Module {
     io.setTurnPosition(state.angle);
   }
 
+  public boolean isAlignedForSysId() {
+    return isHealthy() && Math.abs(edu.wpi.first.math.MathUtil.angleModulus(getAngle().getRadians())) < Math.toRadians(5.0);
+  }
+
+  public void characterize(double volts) {
+    io.setTurnPosition(Rotation2d.kZero);
+    io.setDriveOpenLoop(isAlignedForSysId() ? volts : 0.0);
+  }
+
+  public void logSysId(edu.wpi.first.wpilibj.sysid.SysIdRoutineLog log, String name) {
+    log.motor(name).voltage(edu.wpi.first.units.Units.Volts.of(inputs.driveAppliedVolts))
+        .linearPosition(edu.wpi.first.units.Units.Meters.of(getPositionMeters()))
+        .linearVelocity(edu.wpi.first.units.Units.MetersPerSecond.of(getVelocityMetersPerSec()));
+  }
+
   /** Stops both motors (open loop, zero output). */
   public void stop() {
     io.setDriveOpenLoop(0.0);
@@ -110,7 +125,10 @@ public class Module {
   /** Returns the current turn angle of the module. */
   /** Signal health is debounced in the IO implementation before use. */
   public boolean isHealthy() {
-    return inputs.driveConnected && inputs.turnConnected && inputs.turnEncoderConnected;
+    return inputs.driveConnected && inputs.turnConnected && inputs.turnEncoderConnected
+        && Double.isFinite(inputs.drivePositionRad) && Double.isFinite(inputs.driveVelocityRadPerSec)
+        && inputs.turnPosition != null && Double.isFinite(inputs.turnPosition.getRadians())
+        && Double.isFinite(inputs.turnVelocityRadPerSec);
   }
 
   public Rotation2d getAngle() {

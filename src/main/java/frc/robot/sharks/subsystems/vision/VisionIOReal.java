@@ -18,8 +18,12 @@ public class VisionIOReal implements VisionIO {
       table.getDoubleArrayTopic("botpose_wpiblue").subscribe(new double[0]);
   private final DoubleArraySubscriber megaTag2Entry =
       table.getDoubleArrayTopic("botpose_orb_wpiblue").subscribe(new double[0]);
+  private final DoubleArraySubscriber targetEntry = table.getDoubleArrayTopic("t2d").subscribe(new double[0]);
+  private final NetworkTableEntry pipelineEntry = table.getEntry("getpipe");
   private final NetworkTableEntry heartbeat = table.getEntry("hb");
   private double ultimaTrocaPipeline = 0.0;
+  private int observedPipeline = -2;
+  private double pipelineObservedAt = 0.0;
 
   @Override
   public void definirPipeline(int pipeline) {
@@ -35,17 +39,34 @@ public class VisionIOReal implements VisionIO {
 
   @Override
   public void updateInputs(VisionIOInputs inputs) {
-    inputs.tx = table.getEntry("tx").getDouble(0.0);
-    inputs.ty = table.getEntry("ty").getDouble(0.0);
+    var target = targetEntry.getAtomic();
+    double[] t = target.value;
+    inputs.tx = t.length >= 10 ? t[4] : 0.0;
+    inputs.ty = t.length >= 10 ? t[5] : 0.0;
     double now = Timer.getFPGATimestamp();
     double frameTime = heartbeat.getLastChange() / 1_000_000.0;
     boolean frameRecente = frameTime > 0.0 && frameTime > ultimaTrocaPipeline
         && frameTime <= now + 0.10 && now - frameTime <= 0.50;
-    double pipeline = table.getEntry("getpipe").getDouble(-1.0);
+    double pipeline = pipelineEntry.getDouble(-1.0);
     inputs.pipelineAtual = Double.isFinite(pipeline) && pipeline == Math.rint(pipeline)
         && pipeline >= 0 && pipeline <= 9 ? (int) pipeline : -1;
-    inputs.temAlvo = frameRecente && table.getEntry("tv").getDouble(0.0) >= 1.0;
-    inputs.temAlvoGamepiece = inputs.temAlvo && inputs.pipelineAtual == 1;
+    if (observedPipeline != inputs.pipelineAtual) {
+      observedPipeline = inputs.pipelineAtual;
+      pipelineObservedAt = now;
+    }
+    double published = target.timestamp / 1_000_000.0;
+    // t2d supplies all target metrics atomically. Pipeline is still a separate NT topic.
+    boolean targetFresh = t.length >= 10 && published > ultimaTrocaPipeline + 0.10
+        && published > pipelineObservedAt + 0.10
+        && published <= now + 0.02 && now - published <= Constants.Vision.IDADE_MAXIMA_GAMEPIECE_S
+        && Double.isFinite(t[2]) && Double.isFinite(t[3]) && t[2] >= 0 && t[3] >= 0
+        && now - published + (t[2] + t[3])/1000.0 <= Constants.Vision.IDADE_MAXIMA_GAMEPIECE_S;
+    inputs.temAlvo = frameRecente && targetFresh && t[0] >= 1.0;
+    inputs.areaGamepiece = t.length >= 10 ? t[8] : 0.0;
+    inputs.temAlvoGamepiece = inputs.temAlvo && inputs.pipelineAtual == 1
+        && now - frameTime <= Constants.Vision.IDADE_MAXIMA_GAMEPIECE_S
+        && Double.isFinite(inputs.tx) && Double.isFinite(inputs.areaGamepiece)
+        && inputs.areaGamepiece > 0.0 && inputs.areaGamepiece <= 100.0;
 
     // Leitura atômica: valores e timestamp pertencem à mesma publicação NT.
     var mt1 = megaTag1Entry.getAtomic();
@@ -53,17 +74,8 @@ public class VisionIOReal implements VisionIO {
     preencherPose(mt1.value, mt1.timestamp, false, inputs);
     preencherPose(mt2.value, mt2.timestamp, true, inputs);
 
-    double[] fiducials = table.getEntry("rawfiducials").getDoubleArray(new double[0]);
-    inputs.aprilTagID = -1;
-    for (int i = 0; i + 6 < fiducials.length; i += 7) {
-      int id = (int) Math.round(fiducials[i]);
-      if (inputs.aprilTagID < 0) inputs.aprilTagID = id;
-    }
-    if (!frameRecente || inputs.pipelineAtual != 0) {
-      inputs.aprilTagID = -1;
-    } else {
-      inputs.temAlvo = inputs.temAlvo || fiducials.length >= 7;
-    }
+    inputs.aprilTagID = inputs.temAlvo && inputs.pipelineAtual == 0 && Double.isFinite(t[9])
+        && t[9] > 0 && t[9] == Math.rint(t[9]) && t[9] <= Integer.MAX_VALUE ? (int)t[9] : -1;
   }
 
   /**

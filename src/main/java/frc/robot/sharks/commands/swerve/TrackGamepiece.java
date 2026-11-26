@@ -5,6 +5,9 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj.Timer;
+import frc.robot.sharks.Constants;
+import frc.robot.sharks.OffsetsConstants;
 import frc.robot.sharks.subsystems.swerve.Drive;
 import frc.robot.sharks.subsystems.vision.Vision;
 
@@ -17,7 +20,9 @@ public class TrackGamepiece extends Command {
     private static final double KI = 0.0;
     private static final double KD = 0.0;
 
-    private static final double MAX_SPEED = 1.5;
+    private static final double MAX_SPEED = 0.75;
+    private static final double TIMEOUT_S = 3.0;
+    private final Timer timer = new Timer();
     private static final double MAX_OMEGA = 2.0;
 
     private static final double ANGLE_TOLERANCE = 0.25;
@@ -40,6 +45,7 @@ public class TrackGamepiece extends Command {
     @Override
     public void initialize() {
         pid.reset();
+        timer.restart();
 
         swerve.runVelocity(new ChassisSpeeds());
 
@@ -59,7 +65,7 @@ public class TrackGamepiece extends Command {
             return;
         }
 
-        double tx = limelight.getTx();
+        double tx = limelight.getTx() - OffsetsConstants.Limelight.TX_ALVO_GRAUS;
 
         if (!Double.isFinite(tx)) { //se tx não pertencer ao conjunto dos números finitos.
             swerve.runVelocity(new ChassisSpeeds());
@@ -83,7 +89,14 @@ public class TrackGamepiece extends Command {
             1.0
         );
 
-        double vx = MAX_SPEED * alignment;
+        double vx = 0.0;
+        double area = limelight.getGamepieceArea();
+        double stopArea = Constants.Vision.AREA_PARADA_GAMEPIECE_PERCENT;
+        if (Constants.Vision.APROXIMACAO_GAMEPIECE_HABILITADA
+                && Double.isFinite(stopArea) && stopArea > 0.0 && stopArea <= 100.0
+                && Double.isFinite(area) && area > 0.0 && area < stopArea) {
+            vx = MAX_SPEED * alignment * MathUtil.clamp(1.0 - area / stopArea, 0.0, 1.0);
+        }
 
         swerve.runVelocity(
             new ChassisSpeeds(vx, 0.0, omega)
@@ -95,11 +108,16 @@ public class TrackGamepiece extends Command {
         swerve.runVelocity(new ChassisSpeeds());
         pid.reset();
 
+        timer.stop();
         limelight.disableGamepieceTracking();
     }
 
     @Override
     public boolean isFinished() {
-        return false;
+        double stopArea = Constants.Vision.AREA_PARADA_GAMEPIECE_PERCENT;
+        return timer.hasElapsed(TIMEOUT_S)
+            || (Constants.Vision.APROXIMACAO_GAMEPIECE_HABILITADA
+                && stopArea > 0.0 && stopArea <= 100.0 && limelight.hasTarget()
+                && limelight.getGamepieceArea() >= stopArea);
     }
 }

@@ -17,6 +17,8 @@ public interface GyroIO {
 
     /** Current yaw rate, in rad/s. */
     public double yawVelocityRadPerSec = 0.0;
+    public double pitchDegrees = 0.0;
+    public double rollDegrees = 0.0;
 
     /** Timestamps of the high-frequency odometry yaw samples, in seconds. */
     public double[] odometryYawTimestamps = new double[] {};

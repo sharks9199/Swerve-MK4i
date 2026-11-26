@@ -2,6 +2,7 @@
 package frc.robot.sharks.subsystems.vision;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.sharks.Constants;
@@ -21,6 +22,8 @@ public class Vision extends SubsystemBase {
   /** Minimum number of tags required to accept a measurement. */
   private static final int TAGS_MINIMAS = 1;
 
+  private final AprilTagFieldLayout fieldLayout =
+      AprilTagFieldLayout.loadField(Constants.Vision.CAMPO);
   private final Drive drive;
   private final VisionIO io;
   private final VisionIOInputsAutoLogged inputs = new VisionIOInputsAutoLogged();
@@ -141,6 +144,8 @@ public class Vision extends SubsystemBase {
         || pose == null
         || !Double.isFinite(pose.getX())
         || !Double.isFinite(pose.getY())
+        || pose.getX() < 0.0 || pose.getX() > fieldLayout.getFieldLength()
+        || pose.getY() < 0.0 || pose.getY() > fieldLayout.getFieldWidth()
         || !Double.isFinite(pose.getRotation().getRadians())
         || !Double.isFinite(ambiguidade)
         || !Double.isFinite(distancia)
@@ -178,9 +183,19 @@ public class Vision extends SubsystemBase {
   // Game Piece Tracking
   // ---------------------------------------------------------------------------
 
+  /** Fresh visible tag; angular assist only, no translation or scoring pose. */
+  public boolean hasFreshAprilTag() {
+    return !trackingGamepiece && inputs.pipelineAtual == PIPELINE_APRILTAG && inputs.temAlvo
+        && fieldLayout.getTagPose(inputs.aprilTagID).isPresent() && Double.isFinite(inputs.tx);
+  }
+
   /** Returns the horizontal target offset, in degrees. */
   public double getTx() {
     return inputs.tx;
+  }
+
+  public double getGamepieceArea() {
+    return inputs.areaGamepiece;
   }
 
   /** Returns whether a valid Game Piece target is detected. */
@@ -193,6 +208,7 @@ public class Vision extends SubsystemBase {
   /** Enables Game Piece detection. */
   public void enableGamepieceTracking() {
     trackingGamepiece = true;
+    inputs.temAlvoGamepiece = false;
     io.definirPipeline(PIPELINE_GAMEPIECE);
   }
 
