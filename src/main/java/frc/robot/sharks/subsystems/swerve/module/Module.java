@@ -60,6 +60,8 @@ public class Module {
             AlertType.kError);
   }
 
+  public boolean recoverConfiguration() { return io.recoverConfiguration(); }
+
   /** Updates and logs inputs, converts odometry samples and refreshes disconnect alerts. */
   public void periodic() {
 

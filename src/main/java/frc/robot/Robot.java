@@ -59,6 +59,7 @@ import static edu.wpi.first.units.Units.Seconds;
     @Override
     public void robotPeriodic() {
       CommandScheduler.getInstance().run();
+      m_robotContainer.atualizarRearmeSeguranca();
       if (DriverStation.isAutonomousEnabled() && m_robotContainer.isDriveSafetyBlocked()
           && m_autonomousCommand != null && m_autonomousCommand.isScheduled()) {
         m_autonomousCommand.cancel();

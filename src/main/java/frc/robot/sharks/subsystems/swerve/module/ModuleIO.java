@@ -31,6 +31,9 @@ public interface ModuleIO {
     public Rotation2d[] odometryTurnPositions = new Rotation2d[] {};
   }
 
+  /** Reaplica configuracao pendente somente com o robo desabilitado. */
+  public default boolean recoverConfiguration() { return false; }
+
   /** Refreshes the given inputs with the latest module data. */
   public default void updateInputs(ModuleIOInputs inputs) {}
 

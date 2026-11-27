@@ -46,9 +46,12 @@ public class ModuleIOReal implements ModuleIO {
           TalonFXConfiguration, TalonFXConfiguration, CANcoderConfiguration>
       constants;
 
-  private final boolean driveConfigured;
-  private final boolean turnConfigured;
-  private final boolean encoderConfigured;
+  private boolean driveConfigured;
+  private boolean turnConfigured;
+  private boolean encoderConfigured;
+  private final TalonFXConfiguration driveConfig;
+  private final TalonFXConfiguration turnConfig;
+  private final CANcoderConfiguration cancoderConfig;
   private double couplingReference = Double.NaN;
   private final TalonFX driveTalon;
   private final TalonFX turnTalon;
@@ -99,7 +102,7 @@ public class ModuleIOReal implements ModuleIO {
     turnTalon = new TalonFX(constants.SteerMotorId, Constants.Swerve.CAN_BUS);
     cancoder = new CANcoder(constants.EncoderId, Constants.Swerve.CAN_BUS);
 
-    var driveConfig = constants.DriveMotorInitialConfigs;
+    driveConfig = constants.DriveMotorInitialConfigs;
     driveConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
     driveConfig.Slot0 = constants.DriveMotorGains;
     driveConfig.Feedback.SensorToMechanismRatio = constants.DriveMotorGearRatio;
@@ -118,7 +121,7 @@ public class ModuleIOReal implements ModuleIO {
         && tryUntilOk("Zero drive " + constants.DriveMotorId, 5,
             () -> driveTalon.setPosition(0.0, 0.25));
 
-    var turnConfig = constants.SteerMotorInitialConfigs;
+    turnConfig = constants.SteerMotorInitialConfigs;
     turnConfig.CurrentLimits.SupplyCurrentLimit = Constants.Swerve.LIMITE_ALIMENTACAO_DIRECAO_A;
     turnConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
     turnConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
@@ -146,7 +149,7 @@ public class ModuleIOReal implements ModuleIO {
     turnConfigured = tryUntilOk("Steer " + constants.SteerMotorId, 5,
         () -> turnTalon.getConfigurator().apply(turnConfig, 0.25));
 
-    CANcoderConfiguration cancoderConfig = constants.EncoderInitialConfigs;
+    cancoderConfig = constants.EncoderInitialConfigs;
     cancoderConfig.MagnetSensor.MagnetOffset = constants.EncoderOffset;
     cancoderConfig.MagnetSensor.SensorDirection =
         constants.EncoderInverted
@@ -185,6 +188,28 @@ public class ModuleIOReal implements ModuleIO {
   }
 
   @Override
+  public boolean recoverConfiguration() {
+    if (!edu.wpi.first.wpilibj.DriverStation.isDisabled()) return false;
+    // Uma tentativa por chamada; nunca zerar encoder durante a recuperacao.
+    if (!encoderConfigured && turnAbsolutePosition.getStatus().isOK()) {
+      encoderConfigured = tryUntilOk("CANcoder " + constants.EncoderId, 1,
+          () -> cancoder.getConfigurator().apply(cancoderConfig, 0.05));
+      return encoderConfigured;
+    }
+    if (!turnConfigured && turnPosition.getStatus().isOK()) {
+      turnConfigured = tryUntilOk("Steer " + constants.SteerMotorId, 1,
+          () -> turnTalon.getConfigurator().apply(turnConfig, 0.05));
+      return turnConfigured;
+    }
+    if (!driveConfigured && drivePosition.getStatus().isOK()) {
+      driveConfigured = tryUntilOk("Drive " + constants.DriveMotorId, 1,
+          () -> driveTalon.getConfigurator().apply(driveConfig, 0.05));
+      return driveConfigured;
+    }
+    return false;
+  }
+
+  @Override
   public void updateInputs(ModuleIOInputs inputs) {
 
     var driveStatus =
@@ -194,7 +219,7 @@ public class ModuleIOReal implements ModuleIO {
     var turnEncoderStatus = BaseStatusSignal.refreshAll(turnAbsolutePosition);
 
     // Falha imediata; debounce apenas para recuperar a conexao.
-    inputs.driveConnected = driveConfigured && driveConnectedDebounce.calculate(driveStatus.isOK());
+    inputs.driveConnected = driveConnectedDebounce.calculate(driveConfigured && driveStatus.isOK());
     inputs.rawDriveRotations = drivePosition.getValueAsDouble();
     inputs.rawTurnRotations = turnPosition.getValueAsDouble();
     inputs.drivePositionRad = Units.rotationsToRadians(drivePosition.getValueAsDouble());
@@ -202,8 +227,8 @@ public class ModuleIOReal implements ModuleIO {
     inputs.driveAppliedVolts = driveAppliedVolts.getValueAsDouble();
     inputs.driveCurrentAmps = driveCurrent.getValueAsDouble();
 
-    inputs.turnConnected = turnConfigured && turnConnectedDebounce.calculate(turnStatus.isOK());
-    inputs.turnEncoderConnected = encoderConfigured && turnEncoderConnectedDebounce.calculate(turnEncoderStatus.isOK());
+    inputs.turnConnected = turnConnectedDebounce.calculate(turnConfigured && turnStatus.isOK());
+    inputs.turnEncoderConnected = turnEncoderConnectedDebounce.calculate(encoderConfigured && turnEncoderStatus.isOK());
     inputs.turnAbsolutePosition = Rotation2d.fromRotations(turnAbsolutePosition.getValueAsDouble());
     inputs.turnPosition = Rotation2d.fromRotations(turnPosition.getValueAsDouble());
     inputs.turnVelocityRadPerSec = Units.rotationsToRadians(turnVelocity.getValueAsDouble());

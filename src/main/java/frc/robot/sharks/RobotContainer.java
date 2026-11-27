@@ -109,10 +109,8 @@ public class RobotContainer {
                 && Constants.MODO_ATUAL != Constants.Mode.SIM
                 && DriverStation.isJoystickConnected(Constants.Controles.PORTA_DRIVER)
                 && driverController.getRightBumperButton() && !driverController.getYButton()
-                && !driverController.getLeftStickButton()
-                && Math.hypot(driverController.getLeftX(), driverController.getLeftY()) < 0.15
-                && Math.abs(driverController.getRightX()) < 0.15)
-            .whileTrue(trackgamepiece);
+                && !driverController.getLeftStickButton())
+            .whileTrue(Commands.runOnce(headingController::desativar).andThen(trackgamepiece));
 
         // Elevator presets are only available while teleoperated control is enabled.
         Trigger teleop = new Trigger(() ->
@@ -139,6 +137,12 @@ public class RobotContainer {
         return DriverStation.isJoystickConnected(Constants.Controles.PORTA_DRIVER)
             && Math.hypot(driverController.getLeftX(), driverController.getLeftY()) < 0.08
             && Math.abs(driverController.getRightX()) < 0.08;
+    }
+
+    /** Rearme automatico opcional somente com os comandos de movimento soltos. */
+    public void atualizarRearmeSeguranca() {
+        swerve.autoRearmSafety(sticksNeutral() && !driverController.getYButton()
+            && !driverController.getLeftStickButton() && !driverController.getRightBumperButton());
     }
 
     public boolean isDriveSafetyBlocked() { return swerve.isSafetyBlocked(); }

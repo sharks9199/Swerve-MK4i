@@ -1,6 +1,7 @@
 package frc.robot.sharks.commands.swerve;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -13,6 +14,7 @@ import frc.robot.sharks.Constants;
 import frc.robot.sharks.subsystems.swerve.Drive;
 import frc.robot.sharks.subsystems.swerve.control.HeadingController;
 import frc.robot.sharks.subsystems.swerve.control.SnapController;
+import frc.robot.sharks.subsystems.swerve.control.TranslationSlewLimiter;
 
 import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.Logger;
@@ -48,7 +50,11 @@ public final class SwerveCommands {
       DoubleSupplier lateral,
       DoubleSupplier rotacao) {
     SnapController inputProcessor = new SnapController();
-
+    TranslationSlewLimiter translationLimiter =
+        new TranslationSlewLimiter(
+            Constants.Swerve.ACELERACAO_MAXIMA_MPS2, Constants.Swerve.PERIODO_CONTROLE_SEGUNDOS);
+    SlewRateLimiter omegaLimiter =
+        new SlewRateLimiter(Constants.Swerve.ACELERACAO_ANGULAR_MAXIMA_RAD_S2);
 
     return Commands.run(
             () -> {
@@ -58,6 +64,8 @@ public final class SwerveCommands {
                   || !DriverStation.isJoystickConnected(Constants.Controles.PORTA_DRIVER)) {
                 headingController.desativar();
                 inputProcessor.reset();
+                translationLimiter.reset(Translation2d.kZero);
+                omegaLimiter.reset(0.0);
                 drive.stop();
                 return;
               }
@@ -102,10 +110,25 @@ public final class SwerveCommands {
               Translation2d targetVelocity =
                   translation.times(drive.getVelocidadeMaximaAtual());
 
-              Translation2d velocity = targetVelocity;
+              Translation2d velocity = translationLimiter.calculate(
+                  targetVelocity, drive.getAceleracaoMaximaAtual());
+
+              // Clamp immediately when slow mode reduces the allowed velocity.
+              double limiteVelocidade = drive.getVelocidadeMaximaAtual();
+              if (velocity.getNorm() > limiteVelocidade) {
+                velocity = velocity.times(limiteVelocidade / velocity.getNorm());
+                translationLimiter.reset(velocity);
+              }
               double vx = velocity.getX();
               double vy = velocity.getY();
-              double omega = targetOmega;
+              double omega = omegaLimiter.calculate(targetOmega);
+              // Evita exceder o modo lento ao trocar de perfil em movimento.
+              omega = MathUtil.clamp(
+                  omega,
+                  -drive.getVelocidadeAngularMaximaAtual(),
+                  drive.getVelocidadeAngularMaximaAtual());
+              // Sincroniza o estado interno do limitador depois do clamp do modo lento.
+              omegaLimiter.reset(omega);
 
               drive.runVelocity(
                   ChassisSpeeds.fromFieldRelativeSpeeds(vx, vy, omega, drive.getRotation()));
@@ -135,6 +158,8 @@ public final class SwerveCommands {
 
               headingController.desativar();
               inputProcessor.reset();
+              translationLimiter.reset(Translation2d.kZero);
+              omegaLimiter.reset(0.0);
               drive.stop();
             });
   }

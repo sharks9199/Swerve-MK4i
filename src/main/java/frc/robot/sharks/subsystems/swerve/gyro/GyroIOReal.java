@@ -26,7 +26,7 @@ public class GyroIOReal implements GyroIO {
 
   private final StatusSignal<Angle> pitch = pigeon.getPitch();
   private final StatusSignal<Angle> roll = pigeon.getRoll();
-  private final boolean configured;
+  private boolean configured;
   private final Queue<Double> yawPositionQueue;
   private final Queue<Double> yawTimestampQueue;
 
@@ -47,6 +47,15 @@ public class GyroIOReal implements GyroIO {
     yawTimestampQueue = SwerveOdometry.getInstance().makeTimestampQueue();
 
     yawPositionQueue = SwerveOdometry.getInstance().registerSignal(pigeon.getYaw());
+  }
+
+  @Override
+  public boolean recoverConfiguration() {
+    if (!edu.wpi.first.wpilibj.DriverStation.isDisabled() || configured || !yaw.getStatus().isOK()) return false;
+    // Nao zerar yaw em recuperacao: evita uma mudanca brusca de referencia.
+    configured = PhoenixUtil.tryUntilOk("Pigeon 2", 1,
+        () -> pigeon.getConfigurator().apply(Constants.Swerve.CONFIGURACAO_PIGEON, 0.05));
+    return configured;
   }
 
   @Override

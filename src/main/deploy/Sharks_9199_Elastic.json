@@ -265,6 +265,87 @@
               "period": 0.1,
               "data_type": "string"
             }
+          },
+          {
+            "title": "Segurança manual ativa",
+            "x": 0.0,
+            "y": 640.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/SegurancaAtiva",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4280459371,
+              "false_color": 4292559180,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Swerve bloqueado",
+            "x": 256.0,
+            "y": 640.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/SafetyBlocked",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4292559180,
+              "false_color": 4280459371,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Trava de segurança",
+            "x": 512.0,
+            "y": 640.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/SafetyLatched",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4292559180,
+              "false_color": 4280459371,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Controle conectado",
+            "x": 768.0,
+            "y": 640.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/DriverConnected",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4280459371,
+              "false_color": 4292559180,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Motivo do bloqueio",
+            "x": 0.0,
+            "y": 768.0,
+            "width": 768.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/MotivoBloqueio",
+              "period": 0.1,
+              "data_type": "string"
+            }
           }
         ]
       }
@@ -511,6 +592,87 @@
               "true_icon": "None",
               "false_icon": "None"
             }
+          },
+          {
+            "title": "Segurança manual ativa",
+            "x": 0.0,
+            "y": 640.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/SegurancaAtiva",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4280459371,
+              "false_color": 4292559180,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Swerve bloqueado",
+            "x": 256.0,
+            "y": 640.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/SafetyBlocked",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4292559180,
+              "false_color": 4280459371,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Trava de segurança",
+            "x": 512.0,
+            "y": 640.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/SafetyLatched",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4292559180,
+              "false_color": 4280459371,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Controle conectado",
+            "x": 768.0,
+            "y": 640.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/DriverConnected",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4280459371,
+              "false_color": 4292559180,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Motivo do bloqueio",
+            "x": 0.0,
+            "y": 768.0,
+            "width": 768.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/MotivoBloqueio",
+              "period": 0.1,
+              "data_type": "string"
+            }
           }
         ]
       }
@@ -748,6 +910,155 @@
               "topic": "/AdvantageKit/RealOutputs/Vision/MegaTag2/TagCount",
               "period": 0.1,
               "data_type": "int"
+            }
+          },
+          {
+            "title": "Segurança manual ativa",
+            "x": 0.0,
+            "y": 640.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/SegurancaAtiva",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4280459371,
+              "false_color": 4292559180,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Swerve bloqueado",
+            "x": 256.0,
+            "y": 640.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/SafetyBlocked",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4292559180,
+              "false_color": 4280459371,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Trava de segurança",
+            "x": 512.0,
+            "y": 640.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/SafetyLatched",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4292559180,
+              "false_color": 4280459371,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Controle conectado",
+            "x": 768.0,
+            "y": 640.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/DriverConnected",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4280459371,
+              "false_color": 4292559180,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Motivo do bloqueio",
+            "x": 0.0,
+            "y": 768.0,
+            "width": 768.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/MotivoBloqueio",
+              "period": 0.1,
+              "data_type": "string"
+            }
+          },
+          {
+            "title": "Falha CAN/sensores",
+            "x": 0.0,
+            "y": 896.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/FalhaSensoresCAN",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4292559180,
+              "false_color": 4280459371,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Odometria atrasada",
+            "x": 256.0,
+            "y": 896.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/OdometryWatchdog",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4292559180,
+              "false_color": 4280459371,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Falha de bateria",
+            "x": 512.0,
+            "y": 896.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/LowBatteryFault",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4292559180,
+              "false_color": 4280459371,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Inclinação crítica",
+            "x": 768.0,
+            "y": 896.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Drive/ExcessiveTiltFault",
+              "period": 0.1,
+              "data_type": "boolean",
+              "true_color": 4292559180,
+              "false_color": 4280459371,
+              "true_icon": "None",
+              "false_icon": "None"
             }
           }
         ]

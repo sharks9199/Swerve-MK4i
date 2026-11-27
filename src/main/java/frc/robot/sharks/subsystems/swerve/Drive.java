@@ -120,7 +120,11 @@ public class Drive extends SubsystemBase {
   private double lastSimulationTimestamp = Double.NaN;
   private boolean criticalSensorFault = Constants.MODO_ATUAL == Constants.Mode.REAL;
   private final DriveSafety safety = new DriveSafety();
-  private final Alert safetyAlert = new Alert("Swerve bloqueado: verificar falha e rearmar com BACK em teleop", AlertType.kError);
+  private final Alert safetyAlert = new Alert("Swerve bloqueado: verificar Drive/MotivoBloqueio no dashboard", AlertType.kError);
+  private double nextConfigurationRetry = 0.0;
+  private int configurationRetryIndex = 0;
+  private boolean rebaseOdometry = true;
+  private double rebaseNotBefore = Double.NEGATIVE_INFINITY;
   private double lastValidGyroOdometry = Double.NEGATIVE_INFINITY;
   private double powerFactor = 1.0;
   private double tipFactor = 1.0;
@@ -328,6 +332,18 @@ public class Drive extends SubsystemBase {
 
   @Override
   public void periodic() {
+    // Uma tentativa a cada intervalo, fora do lock de odometria e somente desabilitado.
+    if (Constants.MODO_ATUAL == Constants.Mode.REAL && DriverStation.isDisabled()
+        && Timer.getFPGATimestamp() >= nextConfigurationRetry) {
+      nextConfigurationRetry = Timer.getFPGATimestamp() + Constants.Seguranca.INTERVALO_RECONFIGURACAO_S;
+      boolean recovered = configurationRetryIndex == 0 ? gyroIO.recoverConfiguration()
+          : modules[configurationRetryIndex - 1].recoverConfiguration();
+      configurationRetryIndex = (configurationRetryIndex + 1) % (modules.length + 1);
+      if (recovered) {
+        rebaseOdometry = true;
+        rebaseNotBefore = Timer.getFPGATimestamp();
+      }
+    }
 
     odometryLock.lock();
     try {
@@ -370,17 +386,26 @@ public class Drive extends SubsystemBase {
         && !DriverStation.isJoystickConnected(Constants.Controles.PORTA_DRIVER);
     boolean lowPower = real && (!Double.isFinite(volts) || volts <= Constants.Seguranca.TENSAO_PARADA_V
         || RobotController.isBrownedOut());
-    boolean excessiveTilt = real && (!Double.isFinite(tilt)
-        || tilt >= Constants.Seguranca.INCLINACAO_PARADA_GRAUS);
+    boolean excessiveTilt = real && Constants.Seguranca.PROTECAO_INCLINACAO_ATIVA
+        && (!Double.isFinite(tilt) || tilt >= Constants.Seguranca.INCLINACAO_PARADA_GRAUS);
     powerFactor = real ? DriveSafety.factor(volts, Constants.Seguranca.TENSAO_REDUCAO_V,
         Constants.Seguranca.TENSAO_PARADA_V) : 1.0;
-    tipFactor = real ? DriveSafety.factor(tilt, Constants.Seguranca.INCLINACAO_REDUCAO_GRAUS,
-        Constants.Seguranca.INCLINACAO_PARADA_GRAUS) : 1.0;
-    criticalSensorFault = real && (DriveSensorHealth.criticalFault(gyroInputs.connected, getModuleHealth())
-        || !Double.isFinite(gyroInputs.yawVelocityRadPerSec) || stale || driverLost || lowPower || excessiveTilt);
+    tipFactor = (real && Constants.Seguranca.PROTECAO_INCLINACAO_ATIVA)
+        ? DriveSafety.factor(tilt, Constants.Seguranca.INCLINACAO_REDUCAO_GRAUS,
+            Constants.Seguranca.INCLINACAO_PARADA_GRAUS) : 1.0;
+    boolean[] moduleHealth = getModuleHealth();
+    boolean sensorFault = real && (DriveSensorHealth.criticalFault(gyroInputs.connected, moduleHealth)
+        || !Double.isFinite(gyroInputs.yawVelocityRadPerSec));
+    criticalSensorFault = sensorFault || stale || driverLost || lowPower || excessiveTilt;
+    StringBuilder faultReason = new StringBuilder();
+    if (sensorFault) faultReason.append("Sensores/CAN; ");
+    if (stale) faultReason.append("Odometria; ");
+    if (driverLost) faultReason.append("Controle; ");
+    if (lowPower) faultReason.append("Bateria; ");
+    if (excessiveTilt) faultReason.append("Inclinacao; ");
     safety.update(criticalSensorFault, DriverStation.isEnabled(), now);
-    if (safety.blocked() || DriverStation.isDisabled()) stopImmediately();
-    safetyAlert.set(real && safety.blocked());
+    if (isSafetyBlocked() || DriverStation.isDisabled()) stopImmediately();
+    safetyAlert.set(isSafetyBlocked());
     Logger.recordOutput("Drive/CriticalSensorFault", criticalSensorFault);
     Logger.recordOutput("Drive/SafetyLatched", safety.latched());
     Logger.recordOutput("Drive/OdometryWatchdog", stale);
@@ -390,8 +415,23 @@ public class Drive extends SubsystemBase {
     Logger.recordOutput("Drive/PowerFactor", powerFactor);
     Logger.recordOutput("Drive/TipFactor", tipFactor);
     Logger.recordOutput("Drive/TiltDegrees", tilt);
-    SmartDashboard.putBoolean("Drive/SafetyLatched", safety.latched());
-    SmartDashboard.putBoolean("Drive/SafetyBlocked", safety.blocked());
+    SmartDashboard.putBoolean("Drive/SegurancaAtiva", Constants.SEGURANCA_ATIVA);
+    Logger.recordOutput("Drive/SegurancaAtiva", Constants.SEGURANCA_ATIVA);
+    SmartDashboard.putBoolean("Drive/SafetyLatched", real && safety.latched());
+    SmartDashboard.putBoolean("Drive/SafetyBlocked", isSafetyBlocked());
+    SmartDashboard.putBoolean("Drive/FalhaSensoresCAN", sensorFault);
+    SmartDashboard.putBoolean("Drive/OdometryWatchdog", stale);
+    SmartDashboard.putBoolean("Drive/DriverConnected", DriverStation.isJoystickConnected(Constants.Controles.PORTA_DRIVER));
+    SmartDashboard.putBoolean("Drive/LowBatteryFault", lowPower);
+    SmartDashboard.putBoolean("Drive/ExcessiveTiltFault", excessiveTilt);
+    SmartDashboard.putNumber("Drive/PitchDegrees", gyroInputs.pitchDegrees);
+    SmartDashboard.putNumber("Drive/RollDegrees", gyroInputs.rollDegrees);
+    SmartDashboard.putString("Drive/MotivoBloqueio", faultReason.length() > 0 ? faultReason.toString()
+        : isSafetyBlocked() ? (Constants.SEGURANCA_ATIVA ? "Aguardando BACK" : "Aguardando controle neutro") : "Sem falha");
+    SmartDashboard.putBoolean("Drive/GyroConnected", gyroInputs.connected);
+    for (int i = 0; i < modules.length; i++) {
+      SmartDashboard.putBoolean("Drive/Module" + i + "/Healthy", moduleHealth[i]);
+    }
     arena.setRobotPose(getPose());
     ChassisSpeeds velocidadesMedidas = getChassisSpeeds();
     SmartDashboard.putNumber("Sharks/VelocidadeRealMps",
@@ -421,6 +461,8 @@ public class Drive extends SubsystemBase {
    * updated and could corrupt the next delta calculation.
    */
   private void atualizarOdometria() {
+    if (Constants.MODO_ATUAL == Constants.Mode.REAL && rebaseOdometry
+        && DriveSensorHealth.criticalFault(gyroInputs.connected, getModuleHealth())) return;
     double[] timestamps = modules[0].getOdometryTimestamps();
     int sampleCount = timestamps.length;
     for (int modulo = 0; modulo < modules.length; modulo++) {
@@ -440,7 +482,8 @@ public class Drive extends SubsystemBase {
     int rejectedSamples = 0;
     for (int amostra = 0; amostra < sampleCount; amostra++) {
       double timestamp = timestamps[amostra];
-      boolean valid = Double.isFinite(timestamp) && timestamp > lastOdometryTimestamp;
+      boolean valid = Double.isFinite(timestamp) && timestamp > lastOdometryTimestamp
+          && (!rebaseOdometry || timestamp >= rebaseNotBefore);
       for (int modulo = 0; modulo < modules.length && valid; modulo++) {
         SwerveModulePosition pos = modules[modulo].getOdometryPositions()[amostra];
         double moduleTimestamp = modules[modulo].getOdometryTimestamps()[amostra];
@@ -483,6 +526,13 @@ public class Drive extends SubsystemBase {
         rawGyroRotation = rawGyroRotation.plus(new Rotation2d(twist.dtheta));
       }
 
+      // Encoder recuperado pode ter referencia diferente. Preserva a pose no primeiro
+      // lote valido, em vez de integrar um deslocamento ficticio.
+      if (Constants.MODO_ATUAL == Constants.Mode.REAL && rebaseOdometry) {
+        poseEstimator.resetPosition(rawGyroRotation, posicoes, getPose());
+        firstOdometryTimestamp = timestamp;
+        rebaseOdometry = false;
+      }
       poseEstimator.updateWithTime(timestamp, rawGyroRotation, posicoes);
       firstOdometryTimestamp = Math.min(firstOdometryTimestamp, timestamp);
       lastOdometryTimestamp = timestamp;
@@ -620,6 +670,12 @@ public class Drive extends SubsystemBase {
 
   public boolean isSafetyBlocked() {
     return Constants.MODO_ATUAL == Constants.Mode.REAL && safety.blocked();
+  }
+
+  /** Modo de diagnostico: dispensa BACK, mas nao ignora falhas presentes. */
+  public void autoRearmSafety(boolean neutral) {
+    if (DriverStation.isTeleopEnabled()) safety.autoRearm(Constants.SEGURANCA_ATIVA,
+        Timer.getFPGATimestamp(), Constants.Seguranca.TEMPO_RECUPERACAO_S, neutral);
   }
 
   public void rearmSafety(boolean neutral) {

@@ -41,12 +41,13 @@ public class VisionIOReal implements VisionIO {
   public void updateInputs(VisionIOInputs inputs) {
     var target = targetEntry.getAtomic();
     double[] t = target.value;
-    inputs.tx = t.length >= 10 ? t[4] : 0.0;
-    inputs.ty = t.length >= 10 ? t[5] : 0.0;
+    boolean hasT2d = t.length >= 10;
+    inputs.tx = hasT2d ? t[4] : table.getEntry("tx").getDouble(0.0);
+    inputs.ty = hasT2d ? t[5] : table.getEntry("ty").getDouble(0.0);
     double now = Timer.getFPGATimestamp();
     double frameTime = heartbeat.getLastChange() / 1_000_000.0;
-    boolean frameRecente = frameTime > 0.0 && frameTime > ultimaTrocaPipeline
-        && frameTime <= now + 0.10 && now - frameTime <= 0.50;
+    boolean frameRecente = frameTime <= 0.0
+        || (frameTime <= now + 0.10 && now - frameTime <= 1.0);
     double pipeline = pipelineEntry.getDouble(-1.0);
     inputs.pipelineAtual = Double.isFinite(pipeline) && pipeline == Math.rint(pipeline)
         && pipeline >= 0 && pipeline <= 9 ? (int) pipeline : -1;
@@ -56,15 +57,15 @@ public class VisionIOReal implements VisionIO {
     }
     double published = target.timestamp / 1_000_000.0;
     // t2d supplies all target metrics atomically. Pipeline is still a separate NT topic.
-    boolean targetFresh = t.length >= 10 && published > ultimaTrocaPipeline + 0.10
-        && published > pipelineObservedAt + 0.10
-        && published <= now + 0.02 && now - published <= Constants.Vision.IDADE_MAXIMA_GAMEPIECE_S
-        && Double.isFinite(t[2]) && Double.isFinite(t[3]) && t[2] >= 0 && t[3] >= 0
-        && now - published + (t[2] + t[3])/1000.0 <= Constants.Vision.IDADE_MAXIMA_GAMEPIECE_S;
-    inputs.temAlvo = frameRecente && targetFresh && t[0] >= 1.0;
-    inputs.areaGamepiece = t.length >= 10 ? t[8] : 0.0;
+    boolean targetFresh = hasT2d && published > ultimaTrocaPipeline + 0.05
+        && published > pipelineObservedAt + 0.05
+        && published <= now + 0.10 && now - published <= Constants.Vision.IDADE_MAXIMA_GAMEPIECE_S;
+    boolean tvValid = hasT2d ? (frameRecente && targetFresh && t[0] >= 1.0)
+        : (now - ultimaTrocaPipeline > 0.10 && now - pipelineObservedAt > 0.10
+            && table.getEntry("tv").getDouble(0.0) >= 1.0);
+    inputs.temAlvo = tvValid;
+    inputs.areaGamepiece = hasT2d ? t[8] : table.getEntry("ta").getDouble(0.0);
     inputs.temAlvoGamepiece = inputs.temAlvo && inputs.pipelineAtual == 1
-        && now - frameTime <= Constants.Vision.IDADE_MAXIMA_GAMEPIECE_S
         && Double.isFinite(inputs.tx) && Double.isFinite(inputs.areaGamepiece)
         && inputs.areaGamepiece > 0.0 && inputs.areaGamepiece <= 100.0;
 

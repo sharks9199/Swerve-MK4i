@@ -25,6 +25,18 @@ class DriveSafetyTest {
     s.update(false, false, 1.0);
     assertFalse(s.blocked());
   }
+  @Test void optionalManualRearmNeverBypassesLiveFault() {
+    DriveSafety s = new DriveSafety();
+    s.update(true, true, 1.0);
+    assertFalse(s.autoRearm(false, 2.0, 0.5, true));
+    assertTrue(s.blocked());
+    s.update(false, true, 3.0);
+    assertFalse(s.autoRearm(true, 4.0, 0.5, true));
+    assertFalse(s.autoRearm(false, 3.1, 0.5, true));
+    assertFalse(s.autoRearm(false, 4.0, 0.5, false));
+    assertTrue(s.autoRearm(false, 4.0, 0.5, true));
+    assertFalse(s.blocked());
+  }
   @Test void factorAndRampAreBounded() {
     assertEquals(1.0, DriveSafety.factor(12, 10, 7), 1e-9);
     assertEquals(0.35, DriveSafety.factor(7, 10, 7), 1e-9);

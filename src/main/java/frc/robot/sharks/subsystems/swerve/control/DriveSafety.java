@@ -22,6 +22,10 @@ public final class DriveSafety {
     latched = false;
     return true;
   }
+  /** Dispensar o BACK nunca dispensa saude, tempo de recuperacao ou controle neutro. */
+  public boolean autoRearm(boolean manualSafetyActive, double now, double delay, boolean neutral) {
+    return !manualSafetyActive && latched && rearm(now, delay, neutral);
+  }
   /** Monotonic derating, 0.35 at stop threshold; hard stop handled separately. */
   public static double factor(double value, double full, double stop) {
     if (!Double.isFinite(value) || !Double.isFinite(full) || !Double.isFinite(stop)

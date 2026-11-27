@@ -48,6 +48,11 @@ public final class Constants {
   /** Current runtime mode: {@code REAL} on a roboRIO, otherwise {@link #MODO_SIMULACAO}. */
   public static final Mode MODO_ATUAL = RobotBase.isReal() ? Mode.REAL : MODO_SIMULACAO;
 
+  /** true: rearme manual BACK; false: rearme automatico seguro em teleop.
+   * Intertravamentos de falhas presentes e do Driver Station permanecem ativos.
+   */
+  public static final boolean SEGURANCA_ATIVA = true;
+
   /** Robot runtime modes. */
   public enum Mode {
     /** Running on a real robot. */
@@ -403,8 +408,11 @@ public final class Constants {
   public static final class Seguranca {
     public static final double WATCHDOG_ODOMETRIA_S = 0.10;
     public static final double TEMPO_RECUPERACAO_S = 0.50;
+    public static final double INTERVALO_RECONFIGURACAO_S = 0.25;
     public static final double TENSAO_REDUCAO_V = 10.0;
     public static final double TENSAO_PARADA_V = 7.0;
+    // Habilitar somente apos calibrar MountPose (PITCH/ROLL) do Pigeon 2 com o robo plano no chao.
+    public static final boolean PROTECAO_INCLINACAO_ATIVA = false;
     public static final double INCLINACAO_REDUCAO_GRAUS = 10.0;
     public static final double INCLINACAO_PARADA_GRAUS = 18.0;
     // SysId somente em TEST, com supervisao e area livre; habilitar apos revisao.
@@ -459,14 +467,14 @@ public final class Constants {
   /** Limelight / AprilTag vision parameters. */
   public static final class Vision {
     // A area ta da Limelight e uma proxy de proximidade, nao distancia em metros.
-    // Calibrar com a peca real antes de permitir aproximacao automatica.
-    public static final boolean APROXIMACAO_GAMEPIECE_HABILITADA = false;
-    public static final double AREA_PARADA_GAMEPIECE_PERCENT = 0.0;
-    public static final double IDADE_MAXIMA_GAMEPIECE_S = 0.20;
+    // Valor inicial (~0.5 m); medir ta com a peca a 0.5 m para ajuste fino.
+    public static final boolean APROXIMACAO_GAMEPIECE_HABILITADA = true;
+    public static final double AREA_PARADA_GAMEPIECE_PERCENT = 10.0;
+    public static final double IDADE_MAXIMA_GAMEPIECE_S = 0.50;
     public static final edu.wpi.first.apriltag.AprilTagFields CAMPO =
         edu.wpi.first.apriltag.AprilTagFields.k2026RebuiltWelded;
     /** NetworkTables name of the Limelight camera. */
-    public static final String NOME_LIMELIGHT = "limelight-sharks";
+    public static final String NOME_LIMELIGHT = "limelight";
 
     /** Measurements from tags farther than this are rejected, in meters. */
     public static final double DISTANCIA_MAXIMA_VISAO_METROS = 6.0;

@@ -27,6 +27,9 @@ public interface GyroIO {
     public Rotation2d[] odometryYawPositions = new Rotation2d[] {};
   }
 
+  /** Reaplica configuracao pendente somente com o robo desabilitado. */
+  public default boolean recoverConfiguration() { return false; }
+
   /**
    * Refreshes the given inputs with the latest gyro data.
    *
